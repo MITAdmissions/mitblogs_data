@@ -49,7 +49,9 @@ for i in links:
 	#blogs
 	link = i
 	author = entrySoup.find(id='blogger-meta').contents[1].string.encode('ascii','ignore')
-	date = entrySoup.find(id='blog-meta').contents[1].string.encode('ascii','ignore').replace(',', '')
+	date = entrySoup.find(id='blog-meta').contents[1].string.encode('ascii','ignore')#.replace(',', '')
+	if ',' in date:
+		date = date.replace(',', '')
 	title = entrySoup.find(id='blog-meta').contents[3].string.encode('ascii','ignore')
 	stamp = time.mktime(time.strptime(date, "%b %d %Y"))
 	delta = (datetime.utcnow().date() - datetime.fromtimestamp(stamp).date()).days
@@ -78,7 +80,7 @@ for i in links:
 	entries.append(entry)
 
 	#wait 2 seconds before asking facebook again to avoid rate limits
-	sleep (2)
+	#sleep (2)
 
 ##write to csv and save to directory 
 keys = ['DATE POSTED', 'AUTHOR', 'TITLE', 'LINK', 'DAYS SINCE POSTED', 'LIKES','SHARES','COMMENTS','TOTAL ENGAGEMENT']
