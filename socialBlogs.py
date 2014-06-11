@@ -15,26 +15,10 @@ from datetime import timedelta
 import time
 from time import sleep 
 
-##get list of best of the blogs links 
-#define a base URL & page variable to increment 
-baseURL = "http://mitadmissions.org/blogs/P"
-p = 0 
-headers = { 'User-Agent' : 'PeteyBlogBot' }
-
-#loop through & download last (p==80 for test, p<=4600 for production as of 5/14/2014) blog links into a single stupidly huge document  
-links = []
-baseURL = "http://mitadmissions.org/blogs/P"
-p = 0
-while p<= 4600:
-	html = urllib2.urlopen(baseURL + str(p)).read()
-	entrySoup = BeautifulSoup(html)
-	linkSoup = entrySoup.find_all("h3")
-	for link in linkSoup:
-		thisLink = str(link.a['href'])
-		links.append(thisLink)
-	p = p + 20
-
 #load every link and get data 
+x = open('blogLinks.txt')
+links = []
+links = x.read().splitlines()
 entries = []
 for i in links:
 	##scrape data from blogs
@@ -47,6 +31,7 @@ for i in links:
 
 	##load / clean data in place 
 	#blogs
+	print i
 	link = i
 	author = entrySoup.find(id='blogger-meta').contents[1].string.encode('ascii','ignore')
 	date = entrySoup.find(id='blog-meta').contents[1].string.encode('ascii','ignore')#.replace(',', '')
