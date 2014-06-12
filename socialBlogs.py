@@ -34,6 +34,11 @@ for i in links:
 	print i
 	link = i
 	author = entrySoup.find(id='blogger-meta').contents[1].string.encode('ascii','ignore')
+
+	#many of becca's blogs are broken, so skip her for now (jump to top of while loop)
+	if 'Becca H.' in author: continue
+
+	#if not BrokenBecca, go ahead and load everything 
 	date = entrySoup.find(id='blog-meta').contents[1].string.encode('ascii','ignore')#.replace(',', '')
 	if ',' in date:
 		date = date.replace(',', '')
@@ -42,11 +47,10 @@ for i in links:
 	delta = (datetime.utcnow().date() - datetime.fromtimestamp(stamp).date()).days
 	
 	#fb 
-	fb_total = fb[0]['total_count']
 	fb_comments = fb[0]['comment_count']
 	fb_likes = fb[0]['like_count']
 	fb_shares = fb[0]['share_count']
-	#fb_spread = fb_likes + fb_shares
+	fb_total = fb_comments + fb_likes + fb_shares
 
 	#add to dict
 	entry = {
