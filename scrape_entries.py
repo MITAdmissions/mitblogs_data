@@ -92,6 +92,7 @@ db.execute('''CREATE TABLE IF NOT EXISTS mitblogs (AUTHOR TEXT, DATE_POSTED DATE
 				TITLE TEXT, COURSE TEXT, CATEGORIES TEXT, LINK TEXT, TIME_STAMP TIMESTAMP, 
 				DAYS SINCE POSTED TEXT, ENTRYTEXT TEXT)''')
 
+##should probably move this into loop above so it's not holding the entire list of dicts in place
 for s in entries:
 	db.execute('INSERT INTO mitblogs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
           (s['AUTHOR'], s['DATE POSTED'], s['TITLE'], s['COURSE'], s['CATEGORIES'],
