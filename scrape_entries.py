@@ -2,7 +2,6 @@
 ##code by @peteyreplies
 
 #import some stuff
-from bs4 import BeautifulSoup
 import os
 import csv
 import string
@@ -10,14 +9,16 @@ import urllib
 import urllib2
 import re
 import unicodedata
-import datetime
-import time
 import sqlite3
+import time
+from datetime import datetime
+from datetime import timedelta
+from bs4 import BeautifulSoup
 
 #load list of links from which to scrape data 
-f = open('someBlogLinks.txt')
+x = open('someBlogLinks.txt')
 links = []
-links = f.read().splitlines()
+links = x.read().splitlines()
 entries = []
 for i in links:
 	##scrape data from each entry into soup 
@@ -38,10 +39,8 @@ for i in links:
 	
 	#parse categories & add to string/structure
 	cats = ""
-	#catList = []
 	theseCats = entrySoup.find('p', class_='categories').find_all('a')
 	for c in theseCats:
-		#catList.append(c.string)
 		cats = cats + c.string + ","
 
 	#parse date, timestamps, and days since posted 
@@ -53,7 +52,7 @@ for i in links:
 	delta = (datetime.utcnow().date() - datetime.fromtimestamp(stamp).date()).days
 
 	##get entry text into one long string 
-	lines = soup2.find_all('p', id='', class_='')
+	lines = entrySoup.find_all('p', id='', class_='')
 
 	#remove the 'see complete archives' outlier which always comes first 
 	lines.pop(0)
@@ -82,7 +81,17 @@ for i in links:
 				}
 	entries.append(entry)
 
+##write to sqlite database, which is located 1 level up to not clog repo
+conn = sqlite3.connect("../blogEntries.db")
+db = conn.cursor()
+db.execute('''CREATE TABLE IF NOT EXISTS mitblogs (AUTHOR TEXT, DATE_POSTED DATE, 
+				TITLE TEXT, COURSE TEXT, CATEGORIES TEXT, LINK TEXT, TIME_STAMP TIMESTAMP, 
+				DAYS SINCE POSTED TEXT, ENTRYTEXT TEXT)''')
 
+for s in entries:
+	db.execute('INSERT INTO mitblogs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          (s['AUTHOR'], s['DATE POSTED'], s['TITLE'], s['COURSE'], s['CATEGORIES'],
+          	s['LINK'], s['TIMESTAMP'], s['DAYS SINCE POSTED'], s['ENTRY TEXT']))
+	conn.commit()
 
-
-
+conn.close()
