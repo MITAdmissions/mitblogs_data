@@ -8,12 +8,13 @@ import string
 import urllib
 import urllib2
 
-#define a base URL & page variable to increment 
+#define a base indexical URL & page variable to increment 
+#should eventually make this a method with flags
 baseURL = "http://mitadmissions.org/blogs/P"
 p = 0 
 headers = { 'User-Agent' : 'PeteyBlogBot' }
 
-#loop through & download last (p==80 for test, p<=4620 for production as of 6/11/2014) blog links into a single stupidly huge document  
+#load each indexical page and scrape entry links into list
 links = []
 baseURL = "http://mitadmissions.org/blogs/P"
 p = 0
@@ -26,7 +27,8 @@ while p<= 4620:
 		links.append(thisLink)
 	p = p + 20
 
-##write links to text file for quicker retrieval 
+#write links to resource text file for quicker retrieval 
+#should eventually make this only add new links 
 blogLinks = open('blogLinks.txt','w')
 for n in links:
   blogLinks.write("%s\n" % n)
