@@ -1,7 +1,13 @@
-mitblogs_fb_data
+mitblogs_data
 ================
 
-scrapes data on every mitadmissions blog post ever to see performance on facebook hidden to traditional analytics
+a collection of instruments which help gather data on / from / about the mitadmissions blogs. mostly written by @peteyreplies, who is figuring this out as he goes along. 
 
-* blogScraper.py scrapes the blogs for every link and writes it to blogLinks.txt
-* blogData.py loads blogLinks.txt, runs each line through the link_stat table of the (deprecated) Facebook API, and writes it to fbData.csv
+#scripts
+* blog_link_scraper: scrapes links to individual entries based on index url 
+* blog_FB_data: runs links against (deprecated) facebook API for link_stat social engagement information (w/ some entry metadata as well)
+
+#resources & results
+* blogLinks.txt is a list of all links to all blog entries ever written (as of whenever it was last updated) 
+* fb_data.csv is all the social engagement data collected by blog_FB_data
+
