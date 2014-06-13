@@ -34,7 +34,11 @@ for i in links:
 	#if not BrokenBecca, continue the loop and load more metadata
 	if 'Becca H.' in author: continue
 
-	course = entrySoup.find(id='blogger-meta').find('p').string.encode('ascii','ignore')
+	#some guest bloggers don't have courses, so test for it 
+	if entrySoup.find(id='blogger-meta').find('p') == None:
+		course = "null"
+	else: 
+		course = entrySoup.find(id='blogger-meta').find('p').string.encode('ascii','ignore')
 	title = entrySoup.find(id='blog-meta').find('h2').string.encode('ascii','ignore')
 	
 	#parse categories & add to string/structure
