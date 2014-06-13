@@ -16,7 +16,7 @@ from datetime import timedelta
 from bs4 import BeautifulSoup
 
 #load list of links from which to scrape data 
-x = open('someBlogLinks.txt')
+x = open('blogLinks.txt')
 links = []
 links = x.read().splitlines()
 entries = []
