@@ -73,7 +73,7 @@ for i in links:
 
 ##write to csv and save to directory 
 keys = ['DATE POSTED', 'AUTHOR', 'TITLE', 'LINK', 'DAYS SINCE POSTED', 'LIKES','SHARES','COMMENTS','TOTAL ENGAGEMENT']
-f = open ('fbData.csv','wb')
+f = open ('../DATADUMP/fbData.csv','wb')
 DW = csv.DictWriter(f,keys)
 DW.writer.writerow(keys)
 DW.writerows(entries)

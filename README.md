@@ -9,6 +9,7 @@ a collection of instruments which help gather data on / from / about the mitadmi
 * scrape_entries: loads links and scrapes metadata + entry text into sqlite database
 
 #resources & results
-* blogLinks.txt is a list of all links to all blog entries ever written (as of whenever it was last updated) 
+* allBlogLinks.txt is a list of all links to all blog entries ever written (as of whenever it was last updated)
+* someBlogLinks.txt is a list of ~20 or so links (for a more manageable test corpus) 
 * fb_data.csv is all the social engagement data collected by blog_FB_data
 
