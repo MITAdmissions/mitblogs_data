@@ -31,7 +31,7 @@ for blogger in bloggersNames:
 	bloggers.append(blogger.string.encode('ascii','ignore'))
 
 #load list of links from which to scrape data 
-x = open('someBlogLinks.txt')
+x = open('allBlogLinks.txt')
 links = []
 links = x.read().splitlines()
 for i in links:
