@@ -15,8 +15,24 @@ from datetime import datetime
 from datetime import timedelta
 from bs4 import BeautifulSoup
 
+#open database connection 
+conn = sqlite3.connect("../DATADUMP/blogEntries.db")
+db = conn.cursor()
+db.execute('''CREATE TABLE IF NOT EXISTS mitblogs (AUTHOR TEXT, DATE_POSTED DATE, 
+				TITLE TEXT, CURRENT BLOGGER BOOLEAN, COURSE TEXT, CATEGORIES TEXT, LINK TEXT, TIME_STAMP TIMESTAMP, 
+				DAYS SINCE POSTED TEXT, ENTRYTEXT TEXT)''')
+
+#who is currently a student blogger?
+bloggers = []
+bloggersHTML = urllib2.urlopen('http://mitadmissions.org/blogs/group/students').read()
+bloggersSoup = BeautifulSoup(bloggersHTML)
+bloggersNames = bloggersSoup.find_all("h5")
+for blogger in bloggersNames:
+	thisBlogger = blogger.string.encode('ascii','ignore')
+	bloggers.append(str(thisBlogger))
+
 #load list of links from which to scrape data 
-x = open('blogLinks.txt')
+x = open('someBlogLinks.txt')
 links = []
 links = x.read().splitlines()
 entries = []
@@ -33,6 +49,11 @@ for i in links:
 	author = entrySoup.find(id='blogger-meta').find('h5').string.encode('ascii','ignore')
 	#if not BrokenBecca, continue the loop and load more metadata
 	if 'Becca H.' in author: continue
+
+	#are they a current student blogger?
+	currentBlogger = False
+	if author in bloggers:
+		currentBlogger = True
 
 	#some guest bloggers don't have courses, so test for it 
 	if entrySoup.find(id='blogger-meta').find('p') == None:
@@ -70,33 +91,26 @@ for i in links:
 			break 
 		thisLine = l.getText().encode('ascii','ignore').replace('\n','').replace('\\','').replace('\t','')
 		entryText = entryText + thisLine
+	
+	##insert these values into database
+	db.execute('INSERT INTO mitblogs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          (author, date, title, course, currentBlogger, cats,
+          	link, stamp, delta, entryText))
+	conn.commit()
 
 	#now, write all this to a dict, and append that dict to the list 
-	entry = {
-				'DATE POSTED': date,
-				'AUTHOR': author,
-				'TITLE': title,
-				'COURSE': course,
-				'CATEGORIES': cats,
-				'LINK': link,
-				'TIMESTAMP': stamp,
-				'DAYS SINCE POSTED': delta,
-				'ENTRY TEXT': entryText,
-				}
-	entries.append(entry)
-
-##write to sqlite database, which is located 1 level up to not clog repo
-conn = sqlite3.connect("../blogEntries.db")
-db = conn.cursor()
-db.execute('''CREATE TABLE IF NOT EXISTS mitblogs (AUTHOR TEXT, DATE_POSTED DATE, 
-				TITLE TEXT, COURSE TEXT, CATEGORIES TEXT, LINK TEXT, TIME_STAMP TIMESTAMP, 
-				DAYS SINCE POSTED TEXT, ENTRYTEXT TEXT)''')
-
-##should probably move this into loop above so it's not holding the entire list of dicts in place
-for s in entries:
-	db.execute('INSERT INTO mitblogs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-          (s['AUTHOR'], s['DATE POSTED'], s['TITLE'], s['COURSE'], s['CATEGORIES'],
-          	s['LINK'], s['TIMESTAMP'], s['DAYS SINCE POSTED'], s['ENTRY TEXT']))
-	conn.commit()
+	# entry = {
+	# 			'DATE POSTED': date,
+	# 			'AUTHOR': author,
+	# 			'TITLE': title,
+	# 			'COURSE': course,
+	# 			'CURRENT BLOGGER':currentBlogger,
+	# 			'CATEGORIES': cats,
+	# 			'LINK': link,
+	# 			'TIMESTAMP': stamp,
+	# 			'DAYS SINCE POSTED': delta,
+	# 			'ENTRY TEXT': entryText,
+	# 			}
+	#entries.append(entry)
 
 conn.close()
