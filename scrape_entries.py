@@ -19,8 +19,8 @@ from bs4 import BeautifulSoup
 conn = sqlite3.connect("../DATADUMP/blogEntries.db")
 db = conn.cursor()
 db.execute('''CREATE TABLE IF NOT EXISTS mitblogs (AUTHOR TEXT, DATE_POSTED DATE, 
-				TITLE TEXT, CURRENT BLOGGER BOOLEAN, COURSE TEXT, CATEGORIES TEXT, LINK TEXT, TIME_STAMP TIMESTAMP, 
-				DAYS SINCE POSTED TEXT, ENTRYTEXT TEXT)''')
+				TITLE TEXT, COURSE TEXT, CURRENT_BLOGGER BOOLEAN, CATEGORIES TEXT, LINK TEXT, TIME_STAMP TIMESTAMP, 
+				DAYS_SINCE_POSTED TEXT, ENTRYTEXT TEXT)''')
 
 #who is currently a student blogger?
 bloggers = []
@@ -28,14 +28,12 @@ bloggersHTML = urllib2.urlopen('http://mitadmissions.org/blogs/group/students').
 bloggersSoup = BeautifulSoup(bloggersHTML)
 bloggersNames = bloggersSoup.find_all("h5")
 for blogger in bloggersNames:
-	thisBlogger = blogger.string.encode('ascii','ignore')
-	bloggers.append(str(thisBlogger))
+	bloggers.append(blogger.string.encode('ascii','ignore'))
 
 #load list of links from which to scrape data 
 x = open('someBlogLinks.txt')
 links = []
 links = x.read().splitlines()
-entries = []
 for i in links:
 	##scrape data from each entry into soup 
 	entryHTML = urllib2.urlopen(i).read()
@@ -97,20 +95,5 @@ for i in links:
           (author, date, title, course, currentBlogger, cats,
           	link, stamp, delta, entryText))
 	conn.commit()
-
-	#now, write all this to a dict, and append that dict to the list 
-	# entry = {
-	# 			'DATE POSTED': date,
-	# 			'AUTHOR': author,
-	# 			'TITLE': title,
-	# 			'COURSE': course,
-	# 			'CURRENT BLOGGER':currentBlogger,
-	# 			'CATEGORIES': cats,
-	# 			'LINK': link,
-	# 			'TIMESTAMP': stamp,
-	# 			'DAYS SINCE POSTED': delta,
-	# 			'ENTRY TEXT': entryText,
-	# 			}
-	#entries.append(entry)
 
 conn.close()
