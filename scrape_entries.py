@@ -14,13 +14,14 @@ import time
 from datetime import datetime
 from datetime import timedelta
 from bs4 import BeautifulSoup
+import json
 
 #open database connection 
 conn = sqlite3.connect("../DATADUMP/blogEntries.db")
 db = conn.cursor()
 db.execute('''CREATE TABLE IF NOT EXISTS mitblogs (AUTHOR TEXT, DATE_POSTED DATE, 
 				TITLE TEXT, COURSE TEXT, CURRENT_BLOGGER BOOLEAN, CATEGORIES TEXT, LINK TEXT, TIME_STAMP TIMESTAMP, 
-				DAYS_SINCE_POSTED TEXT, ENTRYTEXT TEXT)''')
+				DAYS_SINCE_POSTED INTEGER, ENTRYTEXT TEXT, COMMENTS INTEGER)''')
 
 #who is currently a student blogger?
 bloggers = []
@@ -29,6 +30,11 @@ bloggersSoup = BeautifulSoup(bloggersHTML)
 bloggersNames = bloggersSoup.find_all("h5")
 for blogger in bloggersNames:
 	bloggers.append(blogger.string.encode('ascii','ignore'))
+
+#set disqus base for later calling
+disqusBase = 'http://disqus.com/api/3.0/threads/list.json?api_key=BytFIyujEVgnm4f00zNbvYUnOMeOnnSi2ri8LUWDpSM9ebQ2T1CLWB12Kn6PtLN7&forum=mitadmissions&thread=link:'
+fbBase = 'https://api.facebook.com/method/links.getStats?urls=%%' 
+fbEnd = '&format=json'
 
 #load list of links from which to scrape data 
 x = open('allBlogLinks.txt')
@@ -90,10 +96,30 @@ for i in links:
 		thisLine = l.getText().encode('ascii','ignore').replace('\n','').replace('\\','').replace('\t','')
 		entryText = entryText + thisLine
 	
+	#look for & count comments 
+	hasDisqus = entrySoup.find('div',id='disqus_thread')
+	hasLegacy = entrySoup.find('div',class_="comment")
+	comments = 0
+	dVotes = 0
+	if hasDisqus != None:
+		disqusBase 
+		commentData = json.load(urllib2.urlopen(disqusBase + link))
+		comments = commentData['response'][0]['posts']
+	elif hasLegacy != None:
+		commentData = entrySoup.find_all('div', id='', class_='comment')
+		comments = len(commentData)
+
+	#get FB engagement 
+	fb = json.load(urllib2.urlopen(fbBase + link + fbEnd))
+	fb_comments = fb[0]['comment_count']
+	fb_likes = fb[0]['like_count']
+	fb_shares = fb[0]['share_count']
+	fb_total = fb_comments + fb_likes + fb_shares
+
 	##insert these values into database
-	db.execute('INSERT INTO mitblogs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+	db.execute('INSERT INTO mitblogs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           (author, date, title, course, currentBlogger, cats,
-          	link, stamp, delta, entryText))
+          	link, stamp, delta, entryText, comments))
 	conn.commit()
 
 conn.close()
