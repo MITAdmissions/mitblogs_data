@@ -3,18 +3,25 @@
 #experimental, unconventional, mostly horrible code by @peteyreplies
 ####
 
+##petey todo 
+# - add comment sentiment score via DSTK call 
+# - add google analytics function 
+# - maybe break up meta entries even further - one for getting date, another for title, etc 
+# - split up this doc into several different subdocs, i.e. for meta, comments, analytics, entities, etc 
+# - tweets? 
+
 ##import various libraries we will need 
-import nltk 						#lol 
-import csv							#in case we need to write to csv
-import string						#to do fancy string operations
-import urllib, urllib2 				#to load URLs 
-import json 						#to parse api strings 						
-import sqlite3						#to connect to database 
-import time 						#to compute time 
-import datetime						#to convert time 
-#from datetime import datetime 		#to convert times  
-from datetime import timedelta		#to compute change in time
-from bs4 import BeautifulSoup		#to scrape through html 
+import nltk 							#lol 
+import csv								#in case we need to write to csv
+import string							#to do fancy string operations
+import urllib, urllib2 					#to load URLs 
+import json 							#to parse api strings 						
+import sqlite3							#to connect to database 
+import time 							#to compute time 
+import datetime							#to convert time 
+#from datetime import datetime 			#to convert times  
+from datetime import timedelta			#to compute change in time
+from bs4 import BeautifulSoup			#to scrape through html 
 
 ##load some private resources for later calling 
 #get the API key for disqus
@@ -104,15 +111,16 @@ def getEntryMeta(entrySoup, currentBloggers):
 	for c in theseCats:
 		cats = cats + c.string + ","
 
-	#get the date, stored in the second item of the blog-meta div
-	date = entrySoup.find(id='blog-meta').contents[1].string.encode('ascii','ignore')
-	
+	raw_date = entrySoup.find(id='blog-meta').contents[1].string.encode('ascii','ignore')
 	#if there is a comma, remove it 
-	if ',' in date:
-		date = date.replace(',', '')
+	if ',' in raw_date:
+		raw_date = raw_date.replace(',', '')
+	#convert to timestamp 
+	stamp = time.mktime(time.strptime(raw_date, "%b %d %Y"))
+	#now covert back to full month name for easier parsing 
+	date = datetime.datetime.fromtimestamp(stamp).strftime('%B %d %Y')
 
-	#now convert to timestamp & timedelta (days since last posted) 
-	stamp = time.mktime(time.strptime(date, "%b %d %Y"))
+	#compute delta 
 	delta = (datetime.utcnow().date() - datetime.fromtimestamp(stamp).date()).days
 
 	#write all of this to a dict 
@@ -131,12 +139,14 @@ def getEntryMeta(entrySoup, currentBloggers):
 def getBasicMeta(entrySoup, link):
 	'''takes soup and returns a dict of basic, often-used metadata'''
 
-	date = entrySoup.find(id='blog-meta').contents[1].string.encode('ascii','ignore')
-	
+	raw_date = entrySoup.find(id='blog-meta').contents[1].string.encode('ascii','ignore')
 	#if there is a comma, remove it 
-	if ',' in date:
-		date = date.replace(',', '')
-	stamp = time.mktime(time.strptime(date, "%b %d %Y"))
+	if ',' in raw_date:
+		raw_date = raw_date.replace(',', '')
+	#convert to timestamp 
+	stamp = time.mktime(time.strptime(raw_date, "%b %d %Y"))
+	#now covert back to full month name for easier parsing 
+	date = datetime.datetime.fromtimestamp(stamp).strftime('%B %d %Y')
 
 	#some metadata 
 	basicMeta = {
@@ -366,6 +376,5 @@ def getEntryPlaces(basicMeta, cliffData, link):
 			places.append(thisPlace)
 	return places
 
-def getGoogleAnalyticsData(link):
+#def getGoogleAnalyticsData(link):
 	'''takes a link and returns # of unique pageviews from GA'''
-
