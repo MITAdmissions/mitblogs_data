@@ -4,37 +4,33 @@
 ####
 
 ##petey todo 
-# - add comment sentiment score via DSTK call 
 # - add google analytics function 
-# - maybe break up meta entries even further - one for getting date, another for title, etc 
-# - split up this doc into several different subdocs, i.e. for meta, comments, analytics, entities, etc 
-# - tweets? 
 
 ##import various libraries we will need 
-import nltk 							#lol 
-import csv								#in case we need to write to csv
-import string							#to do fancy string operations
-import urllib, urllib2 					#to load URLs 
-import json 							#to parse api strings 						
-import sqlite3							#to connect to database 
-import time 							#to compute time 
-import datetime							#to convert time 
-#from datetime import datetime 			#to convert times  
-from datetime import timedelta			#to compute change in time
-from bs4 import BeautifulSoup			#to scrape through html 
+import nltk 									#for hitting CLIFF 
+import dstk										#to do DATA SCIENCE
+import string									#to do fancy string operations
+import urllib, urllib2 							#to load URLs 
+import json 									#to parse api strings 						
+import time 									#to compute time 						
+from datetime import datetime, timedelta, date 	#to convert time  
+from bs4 import BeautifulSoup					#to scrape through html 
 
 ##load some private resources for later calling 
+#set link for testing
+testlink = 'http://mitadmissions.org/blogs/entry/blogger-application-2014'
+
 #get the API key for disqus
 f = open('../RESOURCES/disqus_api_key.txt') 
 disqusKey = f.read()
 
-#get the URL for Civic CLIFF production server 
+#get the URL for Civic CLIFF production server (eventually use my own)
 c = open('../RESOURCES/civic_cliff_server.txt')
 cliffServer = c.read() 
 
 #get the API key for google analytics
 g = open('../RESOURCES/google_api_key.txt') 
-disqusKey = g.read()
+googleKey = g.read()
 
 #define some base URLs for later requests 
 fbBase = 'https://api.facebook.com/method/links.getStats?urls=%%'
@@ -42,14 +38,17 @@ fbEnd = '&format=json'
 disqusCountBase = 'http://disqus.com/api/3.0/threads/list.json?api_key='
 disqusContentBase = 'http://disqus.com/api/3.0/posts/list.json?api_key='
 disqusMid = '&forum=mitadmissions&thread=link:'
+countTweets = 'http://urls.api.twitter.com/1/urls/count.json?url='
 
+#initiate a DSTK instance (eventually use my own server, not the public one )
+dstk = dstk.DSTK()
 
 ##define custom functions
+#getting links to be analyzed 
 def getBlogLinks(num):
 	'''scrapes however many pages of blogs are passed, writes to text file, returns filename'''
-
 	#setup the file this will be written to 
-	now = datetime.datetime.fromtimestamp(time.time()).strftime(' as of %b %d %Y at %H_%M')
+	now = datetime.fromtimestamp(time.time()).strftime(' as of %b %d %Y at %H_%M')
 	filename = '../DATADUMP/bloglinks/'+ str(num) + 'BlogsLinks' + now + '.txt'
 	blogLinks = open(filename,'a')
 
@@ -69,99 +68,123 @@ def getBlogLinks(num):
 	blogLinks.close()
 	return filename
 
-def getCurrentBloggers():
-	'''returns a list of current student bloggers'''
-	currentBloggers = []
-	bloggersHTML = urllib2.urlopen('http://mitadmissions.org/blogs/group/students').read()
-	bloggersSoup = BeautifulSoup(bloggersHTML)
-	bloggersNames = bloggersSoup.find_all("h5")
-	for blogger in bloggersNames:
-		currentBloggers.append(blogger.string.encode('ascii','ignore'))
-	return currentBloggers
 
+#getting names & types of bloggers  
+def getSomeBloggers(link):
+	'''takes a link & returns a list of bloggers in that link's soup \n 
+	(example link: http://mitadmissions.org/blogs/group/students) \n
+	(could/should probably rewrite later to take a type & return that list)'''
+	theseBloggers = []
+	theseBloggersHTML = urllib2.urlopen(link).read()
+	theseBloggersSoup = BeautifulSoup(theseBloggersHTML)
+
+	#find blogger names (formatted w/ the h5 tag)
+	theseBloggersNames = theseBloggersSoup.find_all("h5")
+	
+	#loop through the soup grabbing blogger names & appending to list 
+	for t in theseBloggersNames:
+		theseBloggers.append(t.string.encode('ascii','ignore'))
+	return theseBloggers
+
+
+def getAllBloggers():
+	'''returns a dict of blogger:type pairs'''
+	bloggers = {}
+
+	#get lists of each type of bloggers 
+	currentBloggers = getSomeBloggers('http://mitadmissions.org/blogs/group/students')
+	staffBloggers = getSomeBloggers('http://mitadmissions.org/blogs/group/staff')
+	guestBloggers = getSomeBloggers('http://mitadmissions.org/blogs/group/guests')
+	alumBloggers = getSomeBloggers('http://mitadmissions.org/blogs/group/alums')
+
+	#loop thru each list & add key[authorname]:value[authortype]
+	for c in currentBloggers:
+		bloggers[c] = 'currentBlogger'
+
+	for s in staffBloggers:
+		bloggers[s] = 'staffBlogger'
+
+	for g in guestBloggers:
+		bloggers[g] = 'guestBlogger'
+
+	for a in alumBloggers: 
+		bloggers[a] = 'alumBlogger'
+	return bloggers
+
+
+#getting entry metadata
 def getEntrySoup(link):
-	'''takes a link and returns Soup'''
+	'''takes a link and returns BeautifulSoup object of the associated entry'''
 	entryHTML = urllib2.urlopen(link).read()
 	entrySoup = BeautifulSoup(entryHTML)
 	return entrySoup
 
-def getEntryMeta(entrySoup, currentBloggers):
-	'''takes a soup of a blog entry & list of current bloggers, returns dict of entry metadata'''
-	
-	#get their username, stored in the <h5> tag of the blogger-meta div 
+def getEntryAuthor(entrySoup):
+	'''takes soup & returns author of the entry'''
 	author = entrySoup.find(id='blogger-meta').find('h5').string.encode('ascii','ignore')
-	
-	#are they a current student blogger?
-	current = False
-	if author in currentBloggers:
-		current = True
+	return author
 
+
+def getAuthorCourse(entrySoup):
+	'''takes soup & returns the course of the entry's author (if applicable)'''
 	#get their course (some guest / alum bloggers don't have courses, so test for it first) 
 	if entrySoup.find(id='blogger-meta').find('p') == None:
 		course = "None"
 	else: 
 		course = entrySoup.find(id='blogger-meta').find('p').string.encode('ascii','ignore')
-	
+	return course
+
+
+def getEntryTitle(entrySoup):
+	'''takes soup & returns the title of the post'''
 	#get the post title, stored in the <h2> tag of the blog-meta div
 	title = entrySoup.find(id='blog-meta').find('h2').string.encode('ascii','ignore')
+	return title
 
-	#get post categories & add to a string (structure would be nice later)
-	cats = ""
-	theseCats = entrySoup.find('p', class_='categories').find_all('a')
-	for c in theseCats:
-		cats = cats + c.string + ","
 
+def getCategoriesList(entrySoup):
+	'''takes soup & returns the entry's categories as a list'''
+		#get post categories & add to a string (structure would be nice later)
+	cats = entrySoup.find('p', class_='categories').find_all('a')
+	return cats
+
+
+def getEntryDateTime(entrySoup):
+	'''takes soup & returns a dict of date and time stuff''' 
 	raw_date = entrySoup.find(id='blog-meta').contents[1].string.encode('ascii','ignore')
 	#if there is a comma, remove it 
 	if ',' in raw_date:
 		raw_date = raw_date.replace(',', '')
-	#convert to timestamp 
-	stamp = time.mktime(time.strptime(raw_date, "%b %d %Y"))
-	#now covert back to full month name for easier parsing 
-	date = datetime.datetime.fromtimestamp(stamp).strftime('%B %d %Y')
+
+	#convert to stamp 
+	stamp = time.mktime(time.strptime(raw_date, '%b %d %Y'))
+
+	#convert stamp back to more readable date
+	date = datetime.fromtimestamp(stamp).strftime('%B %d %Y')
 
 	#compute delta 
 	delta = (datetime.utcnow().date() - datetime.fromtimestamp(stamp).date()).days
-
-	#write all of this to a dict 
-	entryMeta = {
-						'entry_author': author,
-						'author_course': course,
-						'entry_title': title,
-						'entry_categories': cats,
-						'entry_date': date,
-						'entry_stamp':stamp,
-						'entry_delta': delta,
-						'author_currentBlogger?':current,
-						}
-	return entryMeta
-
-def getBasicMeta(entrySoup, link):
-	'''takes soup and returns a dict of basic, often-used metadata'''
-
-	raw_date = entrySoup.find(id='blog-meta').contents[1].string.encode('ascii','ignore')
-	#if there is a comma, remove it 
-	if ',' in raw_date:
-		raw_date = raw_date.replace(',', '')
-	#convert to timestamp 
-	stamp = time.mktime(time.strptime(raw_date, "%b %d %Y"))
-	#now covert back to full month name for easier parsing 
-	date = datetime.datetime.fromtimestamp(stamp).strftime('%B %d %Y')
-
-	#some metadata 
-	basicMeta = {
-				  'entry_title': entrySoup.find(id='blog-meta').find('h2').string.encode('ascii','ignore'),
-				  'entry_author': entrySoup.find(id='blogger-meta').find('h5').string.encode('ascii','ignore'),
-				  'entry_date': date,
-				  'entry_stamp': stamp,
-				  'entry_link': link,
-				}
-	return basicMeta
 	
+	#create dict 
+	entryDateTime = {
+						'entry_date': date,
+						'entry_stamp': stamp,
+						'entry_delta': delta,
+	}
+	return entryDateTime 
 
+def getBasicMeta(entrySoup):
+	'''takes soup & returns basic, commonly used metadata'''
+	basicMeta = {
+					'entry_author': getEntryAuthor(entrySoup),
+					}
+	basicMeta.update(getEntryDateTime(entrySoup))
+	return basicMeta
+
+
+#getting entry text 
 def getEntryText(entrySoup):
 	'''takes a soup of a blog entry and returns a string of that entry's text'''
-
 	#put every <p> (which lacks other ids / classes) into a list of strings 
 		#note: this loses entry text in (e.g.) lists & blockquotes! fix later 
 	lines = entrySoup.find_all('p', id='', class_='')
@@ -180,54 +203,58 @@ def getEntryText(entrySoup):
 		#otherwise, get the text of the line, 
 		thisLine = l.getText().encode('ascii','ignore').replace('\n','').replace('\\','').replace('\t','')
 		entryText = entryText + thisLine
-
 	return entryText
 
-def getEntryCommentCount(entrySoup, link):
-	'''takes a soup & a link and returns associated comment count for either legacy or disqus'''
-
+#getting entry comment counts & comment content 
+def getEntryCommentSystem(entrySoup):
+	'''takes soup & returns a string of the type of comment system'''
 	#if it has a comment class, it's legacy system, & just count len of list of comment classes
 	if entrySoup.find('div',class_="comment") != None:
-		comments = len(entrySoup.find_all('div', id='', class_='comment'))
+		return 'legacy'
+	else: 
+		'return disqus' 
+
+# def getEntryCommentCount(entrySoup, link):
+# 	'''takes a soup & a link and returns associated comment count for either legacy or disqus'''
+# 	#if it has a comment class, it's legacy system, & just count len of list of comment classes
+# 	if entrySoup.find('div',class_="comment") != None:
+# 		comments = len(entrySoup.find_all('div', id='', class_='comment'))
 	
-	#if not, it's disqus, so ask their API for how many posts that thread has 
+# 	#if not, it's disqus, so ask their API for how many posts that thread has 
+# 	else:
+# 		disqusData = json.load(urllib2.urlopen(disqusCountBase + disqusKey + disqusMid + link))
+# 		comments = disqusData['response'][0]['posts']
+# 	return comments
+
+def getEntryCommentCount(entrySoup, link):
+	'''takes a soup & link and returns associated comment count'''
+	if getEntryCommentSystem == 'legacy':
+		comments = len(entrySoup.find_all('div', id='', class_='comment'))
 	else:
 		disqusData = json.load(urllib2.urlopen(disqusCountBase + disqusKey + disqusMid + link))
-		comments = disqusData['response'][0]['posts']
+ 		comments = disqusData['response'][0]['posts']
+ 	return comments
 
-	return comments
-
-def getEntryFBData(link):
-	'''takes a link and returns a dict of facebook engagement data'''
-
-	#ask for engagement data from facebook's API
-	fbd = json.load(urllib2.urlopen(fbBase + link + fbEnd))
-	fbc = fbd[0]['comment_count']
-	fbl = fbd[0]['like_count']
-	fbs = fbd[0]['share_count']
-	fbt = fbc + fbl + fbs
-
-	fbData = {
-				'FB_LIKES': fbl,
-				'FB_SHARES': fbs,
-				'FB_COMMENTS': fbc,
-				'FB_ENGAGEMENT': fbt,
-				}
-
-	return fbData
+def getCommentSentiment(commentText):
+	'''takes a string of a comment & returns int of sentiment computed by DSTK'''
+	sentiment = dstk.text2sentiment(commentText)['score']
+	return sentiment
 
 def getLegacyComments(entrySoup, link):
 	'''takes soup & link and returns a list of dicts for comments associated w/ that entry'''
+	#get the basic meta for the associated entry 
+	basicMeta = getBasicMeta(entrySoup)
 
 	#construct a list of soup components which have a comment class 
 	rawComments = entrySoup.find_all('div', id='', class_='comment')
 	cleanedComments = []
 
-	#get basicMeta for this soup
-	basicMeta = getBasicMeta(entrySoup)
+	#for each item in the comment list
+	#set ordinal rank for computing firstpost 
+	num = 0
 
-	#for each item in the comment list 
 	for c in rawComments:
+		num = num + 1 
 
 		#grab commenter class & clean out the standard 'posted by' leading language 
 		posted = c.find(class_='commenter').getText().encode('ascii','ignore')
@@ -253,23 +280,23 @@ def getLegacyComments(entrySoup, link):
 
 		#what type of comment is this? 
 		system = 'legacy'
-
 		thisComment = {
 						'commenter': user,
 						'comment_date':date,
 						'comment_stamp': stamp,
 						'comment_text': text,
 						'comment_system': system,
-						'link':link, 
+						'comment_sentiment': getCommentSentiment(text),
+						'comment_num': num,
+						'entry_link':link, 
 											}
 		thisComment.update(basicMeta)
 		cleanedComments.append(thisComment)
-
 	return cleanedComments
+
 
 def getDisqusComments(entrySoup, link):
 	'''takes soup & link and returns a list of dicts for comments associated w/ that entry'''
-
 	#get basicMeta for this Soup
 	basicMeta = getBasicMeta(entrySoup)
 
@@ -280,34 +307,74 @@ def getDisqusComments(entrySoup, link):
 	disqusData = json.load(urllib2.urlopen(disqusContentBase + disqusKey + disqusMid + link))
 
 	#inside that dict is a list; inside that list is a dict, so loop & get comments
+	#comments are in reverse chronological order, so count down 
+	num = len(disqusData['response'])
 	for c in disqusData['response']: 
-		
 		#get the text of the comment 
-		text = ['raw_message'].encode('ascii','ignore')
+		text = c['raw_message'].encode('ascii','ignore')
 
 		#get the commenter's name 
-		user = ['author']['name'].encode('ascii','ignore')
+		user = c['author']['name'].encode('ascii','ignore')
 
 		#get & format date of the comment 
-		raw_date = ['createdAt'].encode('ascii','ignore')[0:10]
+		raw_date = c['createdAt'].encode('ascii','ignore')[0:10]
 		stamp = time.mktime(time.strptime(raw_date, '%Y-%m-%d'))
-		date = datetime.datetime.fromtimestamp(stamp).strftime('%b %d %Y')
+		date = datetime.fromtimestamp(stamp).strftime('%B %d %Y')
 
 		#what type of comment is this? 
 		system = 'disqus'
-
 		thisComment = {
 						'commenter': user,
 						'comment_date':date,
 						'comment_stamp': stamp,
 						'comment_text': text,
 						'comment_system': system,
+						'comment_num': num, 
+						'comment_sentiment': getCommentSentiment(text),
 						'entry_link': link, 
 											}
 		thisComment.update(basicMeta)
 		cleanedComments.append(thisComment)
+		#decrement num 
+		num = num - 1
 	return cleanedComments
 
+def getEntryComments(entrySoup, link):
+	'''takes soup & link, returns dict of comments associated w/ entry)'''
+	if getEntryCommentSystem(entrySoup) == 'legacy':
+		return getLegacyComments(entrySoup, link)
+	else:
+		return getDisqusComments(entrySoup, link)
+
+#getting analytics from web & social media 
+def getEntryFBData(link):
+	'''takes a link and returns a dict of facebook engagement data'''
+	#ask for engagement data from facebook's API
+	fbd = json.load(urllib2.urlopen(fbBase + link + fbEnd))
+	fbc = fbd[0]['comment_count']
+	fbl = fbd[0]['like_count']
+	fbs = fbd[0]['share_count']
+	fbt = fbc + fbl + fbs
+	fbData = {
+				'FB_LIKES': fbl,
+				'FB_SHARES': fbs,
+				'FB_COMMENTS': fbc,
+				'FB_ENGAGEMENT': fbt,
+				}
+	return fbData
+
+def getTweetCount(link):
+	'''takes a link and returns an int == count of times this link has been tweeted'''
+	#ask twitter for a json dict of count of times a link has been tweeted 
+	data = json.loads((urllib2.urlopen(countTweets + link).read()))
+	count = data['count']
+	return count 
+
+#def getGoogleAnalyticsData(link):
+	'''takes a link and returns # of unique pageviews from GA'''
+
+
+#getting entity extraction data from CLIFF 
 def getCLIFFData(entryText):
 	'''takes the entryText and runs it against the Civic CLIFF server for analysis, returns a json dict. based on code by @natematias'''
 	
@@ -316,15 +383,13 @@ def getCLIFFData(entryText):
 	query = urllib.urlencode(text)
 	req = urllib2.Request(cliffServer,query)
 	cliffData = json.loads((urllib2.urlopen(req).read()))
-
 	return cliffData
+
 		
 def getEntryOrgs(basicMeta, cliffData, link):
 	'''takes the soup, cliffData, and a link, extracts organizations, returns a list of dicts'''
-
 	#create a list to hold the dicts of orgs
 	organizations = []
-
 	##if any orgs,  
 	if cliffData['results']['organizations'] != None: 
 		for o in cliffData['results']['organizations']:
@@ -337,17 +402,16 @@ def getEntryOrgs(basicMeta, cliffData, link):
 			organizations.append(thisOrg)
 	return organizations
 
+
 def getEntryPeople(basicMeta, cliffData, link):
 	'''takes the soup, cliffData, and a link, extracts people, returns a list of dicts'''
-
 	#create a list to hold the dicts of orgs
 	people = []
-
 	##if any orgs,  
 	if cliffData['results']['people'] != None: 
 		for p in cliffData['results']['people']:
 			thisPerson = {
-						'personCount': p['count'].encode('ascii','ignore'),
+						'personCount': p['count'],
 						'personName': p['name'].encode('ascii','ignore'),
 						'entry_url': link, 
 					  }
@@ -355,12 +419,11 @@ def getEntryPeople(basicMeta, cliffData, link):
 			people.append(thisPerson)
 	return people
 
+
 def getEntryPlaces(basicMeta, cliffData, link):
 	'''takes the soup, cliffData, and a link, extracts people, returns a list of dicts'''
-
 	#create a list to hold the dicts of orgs
 	places = []
-
 	##if any places mentioned (not about), grab some *very basic* data   
 	if cliffData['results']['places']['mentions'] != None: 
 		for m in cliffData['results']['places']['mentions']:
@@ -376,5 +439,4 @@ def getEntryPlaces(basicMeta, cliffData, link):
 			places.append(thisPlace)
 	return places
 
-#def getGoogleAnalyticsData(link):
-	'''takes a link and returns # of unique pageviews from GA'''
+
