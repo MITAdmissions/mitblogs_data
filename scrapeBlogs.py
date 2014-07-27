@@ -12,9 +12,12 @@ import dstk										#to do DATA SCIENCE
 import string									#to do fancy string operations
 import urllib, urllib2 							#to load URLs 
 import json 									#to parse api strings 						
-import time 									#to compute time 						
+import time 									#to compute time 
+import re 										#to use regex 	
 from datetime import datetime, timedelta, date 	#to convert time  
-from bs4 import BeautifulSoup					#to scrape through html 
+from bs4 import BeautifulSoup					#to scrape through html
+from readability_score.calculators.fleschkincaid import *
+from hyphenator import Hyphenator	 
 
 ##load some private resources for later calling 
 #set link for testing
@@ -67,7 +70,6 @@ def getBlogLinks(num):
 		p = p + 20 
 	blogLinks.close()
 	return filename
-
 
 #getting names & types of bloggers  
 def getSomeBloggers(link):
@@ -182,28 +184,58 @@ def getBasicMeta(entrySoup):
 	return basicMeta
 
 
-#getting entry text 
-def getEntryText(entrySoup):
-	'''takes a soup of a blog entry and returns a string of that entry's text'''
-	#put every <p> (which lacks other ids / classes) into a list of strings 
-		#note: this loses entry text in (e.g.) lists & blockquotes! fix later 
-	lines = entrySoup.find_all('p', id='', class_='')
+# #getting entry text 
+# def getEntryText(entrySoup):
+###this was broken in a lot of ways, so trying a dstk approach 
+# 	'''takes a soup of a blog entry and returns a string of that entry's text'''
+# 	#put every <p> (which lacks other ids / classes) into a list of strings 
+# 		#note: this loses entry text in (e.g.) lists & blockquotes! fix later 
+# 	lines = entrySoup.find_all('p', id='', class_='')
 
-	#remove the 'see complete archives' line which always comes first 
+# 	#remove the 'see complete archives' line which always comes first 
+# 	lines.pop(0)
+
+# 	#then, iterate through this list of strings, get and clean the text, and add to big string
+# 	entryText = ""
+# 	for l in lines:
+# 		#make sure this isn't the comments lines at the end of legacy comment system posts
+# 		if "Comments have been closed" in l:
+# 			break
+# 		if "No comments yet" in l:
+# 			break 
+# 		#otherwise, get the text of the line, 
+# 		thisLine = l.getText().encode('ascii','ignore').replace('\n','').replace('\\','').replace('\t','').replace("\'","'")
+# 		entryText = entryText + thisLine + ' '
+# 	return entryText
+
+def getEntryText(link):
+	'''takes a link, runs it against the DSTK story extractor, & returns a string of the entry''' 
+	#get the entryHTML anew 
+	entryHTML = urllib2.urlopen(link).read()
+
+	#run the HTML against DSTK's boilerplate story detection service  
+	text = dstk.html2story(entryHTML)
+
+	#grab the value of the returned dict & read it into an ASCII string 
+	textstring = text['story'].encode('ascii','ignore')
+
+	#split at newline character for cleaning & counting 
+	lines = textstring.split('\n')
+
+	#remove the categories entry w/ comes first & the last two blank spaces 
 	lines.pop(0)
 
-	#then, iterate through this list of strings, get and clean the text, and add to big string
-	entryText = ""
+	#now reconstruct into a string 
+	entryText = ''
 	for l in lines:
-		#make sure this isn't the comments lines at the end of legacy comment system posts
-		if "Comments have been closed" in l:
-			break
-		if "No comments yet" in l:
-			break 
-		#otherwise, get the text of the line, 
-		thisLine = l.getText().encode('ascii','ignore').replace('\n','').replace('\\','').replace('\t','')
-		entryText = entryText + thisLine
+		entryText = entryText + l + ' ' 
 	return entryText
+
+def getEntryWords(entryText):
+	'''takes a string of an entry's text & returns count of words based on whitespace split''' 
+	words = entryText.split(' ')
+	return len(words)
+
 
 #getting entry comment counts & comment content 
 def getEntryCommentSystem(entrySoup):
