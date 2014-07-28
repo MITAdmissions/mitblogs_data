@@ -1,6 +1,6 @@
 #####
-#custom functions for scraping the MITAdmissions blogs
-#experimental, unconventional, mostly horrible code by @peteyreplies
+# functions for scraping the MITAdmissions blogs
+# by @peteyreplies
 ####
 
 ##petey todo 
@@ -34,8 +34,8 @@ g = open('../RESOURCES/google_api_key.txt')
 googleKey = g.read()
 
 #get the OAuth JSON for google analytics
-o = open('../RESOURCES/google_oauth.json') 
-googleAuth = o.read()
+#o = open('../RESOURCES/google_oauth.json') 
+#googleAuth = o.read()
 
 #define some base URLs for later requests 
 fbBase = 'https://api.facebook.com/method/links.getStats?urls=%%'
@@ -56,9 +56,6 @@ def getBlogLinks(num):
 	now = datetime.fromtimestamp(time.time()).strftime(' as of %b %d %Y at %H_%M')
 	filename = '../DATADUMP/bloglinks/'+ str(num) + 'BlogsLinks' + now + '.txt'
 	blogLinks = open(filename,'a')
-
-	baseURL = "http://mitadmissions.org/blogs/P"
-	p = 0
 	baseURL = "http://mitadmissions.org/blogs/P"
 	p = 0
 	while p<= num:
@@ -176,7 +173,8 @@ def getEntryDateTime(entrySoup):
 	stamp = time.mktime(time.strptime(raw_date, '%b %d %Y'))
 
 	#convert stamp back to more readable date
-	date = datetime.fromtimestamp(stamp).strftime('%B %d %Y')
+	#date = datetime.fromtimestamp(stamp).strftime('%B %d %Y') // more human readable but less computable
+	date = datetime.fromtimestamp(stamp).strftime('%m-%d-%Y')
 
 	#compute delta 
 	delta = (datetime.utcnow().date() - datetime.fromtimestamp(stamp).date()).days
@@ -198,31 +196,6 @@ def getBasicMeta(entrySoup, link):
 					}
 	basicMeta.update(getEntryDateTime(entrySoup))
 	return basicMeta
-
-
-# #getting entry text 
-# def getEntryText(entrySoup):
-###this was broken in a lot of ways, so trying a dstk approach 
-# 	'''takes a soup of a blog entry and returns a string of that entry's text'''
-# 	#put every <p> (which lacks other ids / classes) into a list of strings 
-# 		#note: this loses entry text in (e.g.) lists & blockquotes! fix later 
-# 	lines = entrySoup.find_all('p', id='', class_='')
-
-# 	#remove the 'see complete archives' line which always comes first 
-# 	lines.pop(0)
-
-# 	#then, iterate through this list of strings, get and clean the text, and add to big string
-# 	entryText = ""
-# 	for l in lines:
-# 		#make sure this isn't the comments lines at the end of legacy comment system posts
-# 		if "Comments have been closed" in l:
-# 			break
-# 		if "No comments yet" in l:
-# 			break 
-# 		#otherwise, get the text of the line, 
-# 		thisLine = l.getText().encode('ascii','ignore').replace('\n','').replace('\\','').replace('\t','').replace("\'","'")
-# 		entryText = entryText + thisLine + ' '
-# 	return entryText
 
 def getEntryText(link):
 	'''takes a link, runs it against the DSTK story extractor, & returns a string of the entry''' 
@@ -263,17 +236,6 @@ def getEntryCommentSystem(entrySoup):
 		system = 'disqus'
 	return system
 
-# def getEntryCommentCount(entrySoup, link):
-# 	'''takes a soup & a link and returns associated comment count for either legacy or disqus'''
-# 	#if it has a comment class, it's legacy system, & just count len of list of comment classes
-# 	if entrySoup.find('div',class_="comment") != None:
-# 		comments = len(entrySoup.find_all('div', id='', class_='comment'))
-	
-# 	#if not, it's disqus, so ask their API for how many posts that thread has 
-# 	else:
-# 		disqusData = json.load(urllib2.urlopen(disqusCountBase + disqusKey + disqusMid + link))
-# 		comments = disqusData['response'][0]['posts']
-# 	return comments
 
 def getEntryCommentCount(entrySoup, link):
 	'''takes a soup & link and returns associated comment count'''
@@ -311,11 +273,12 @@ def getLegacyComments(entrySoup, link):
 
 		#grab last 3 elements of posted (components of date) & format as date
 		postedDateList = cleaned.split()[-3:]
-		date = ''
+		raw_date = ''
 		for d in postedDateList:
-			date = date + d + ' '
-		date = date.rstrip(' ').replace(',', '')
-		stamp = time.mktime(time.strptime(date, "%B %d %Y"))
+			raw_date = raw_date + d + ' '
+		raw_date = raw_date.rstrip(' ').replace(',', '')
+		stamp = time.mktime(time.strptime(raw_date, "%B %d %Y"))
+		date = datetime.fromtimestamp(stamp).strftime('%m-%d-%Y')
 		
 		#now pop the last 4 (date) elements out, you're left w/ the username 
 		postedUserList = cleaned.split()[:-4]
@@ -368,7 +331,7 @@ def getDisqusComments(entrySoup, link):
 		#get & format date of the comment 
 		raw_date = c['createdAt'].encode('ascii','ignore')[0:10]
 		stamp = time.mktime(time.strptime(raw_date, '%Y-%m-%d'))
-		date = datetime.fromtimestamp(stamp).strftime('%B %d %Y')
+		date = datetime.fromtimestamp(stamp).strftime('%m-%d-%Y')
 
 		#what type of comment is this? 
 		system = 'disqus'
@@ -426,8 +389,8 @@ def getTweetCount(link):
 
 #getting entity extraction data from CLIFF 
 def getCLIFFData(entryText):
-	'''takes the entryText and runs it against the Civic CLIFF server for analysis, returns a json dict. based on code by @natematias'''
-	
+	'''takes the entryText and runs it against the Civic CLIFF server for analysis, returns a json dict. '''
+	'''based on code by @natematias'''
 	#query the server for analysis 
 	text = {"q":entryText}
 	query = urllib.urlencode(text)

@@ -16,7 +16,7 @@ bloggers = getAllBloggers()
 #make a count for becca
 becca = 0
 
-#set database
+#create database
 initializeDatabase()
 
 #load links into list 
@@ -36,9 +36,9 @@ for link in links:
 	basicMeta = getBasicMeta(entrySoup, link)
 	cliffData = getCLIFFData(entryText)
 
-	#if 'Becca H.' in getEntryAuthor(entrySoup): becca = becca + 1; continue
+	if 'Becca H.' in getEntryAuthor(entrySoup): becca = becca + 1; continue
 	
-	#make a dict of entry metadata + stats & load into database 
+	#make a dict of entry metadata + stats, then load into database + csv
 	print 'getting meta'
 	entryMeta = {
 					'author_course': getAuthorCourse(entrySoup),
@@ -52,6 +52,7 @@ for link in links:
 	}
 	entryMeta.update(basicMeta)
 	insertMetaData(entryMeta)
+	writeCSV(entryMeta, 'entry_metadata')
 
 	#make a dict of entry full-text content + meta & load into database 
 	print 'getting content'
@@ -60,25 +61,30 @@ for link in links:
 	}
 	entryContent.update(basicMeta)
 	insertEntryContent(entryContent)
+	writeCSV(entryContent, 'entry_content')
 
 	print 'getting comments'
 	#get a list of dicts representing full text comments associated w/ entry & load into database 
 	entryComments = getEntryComments(entrySoup, link)
 	for c in entryComments:
 		insertComments(c)
+		writeCSV(c, 'entry_comments')
 
 	print 'getting entities'
 	#get a list of dicts representing entitites mentioned in the entry & load into database 
-	entitiesMentioned = getEntryOrgs(basicMeta, cliffData, link)
-	entitiesMentioned.append(getEntryPeople(basicMeta, cliffData, link))
+	orgs = getEntryOrgs(basicMeta, cliffData, link)
+	people = getEntryPeople(basicMeta, cliffData, link)
+	entitiesMentioned = orgs + people
 	for e in entitiesMentioned:
-		print e.keys()
 		insertEntities(e)
+		writeCSV(e, 'entry_entities')
 
 	print 'getting places'
 	#get a list of dicts representing places mentioned in the entry & load into database 
 	placesMentioned = getEntryPlaces(basicMeta, cliffData, link)
 	for p in placesMentioned:
 		insertPlaces(p)
+		writeCSV(p, 'entry_places')
 
-
+print 'becca count = ' + str(becca)
+print 'done!'
