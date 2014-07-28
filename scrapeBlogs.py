@@ -258,9 +258,10 @@ def getEntryCommentSystem(entrySoup):
 	'''takes soup & returns a string of the type of comment system'''
 	#if it has a comment class, it's legacy system, & just count len of list of comment classes
 	if entrySoup.find('div',class_="comment") != None:
-		return 'legacy'
+		system = 'legacy'
 	else: 
-		'return disqus' 
+		system = 'disqus'
+	return system
 
 # def getEntryCommentCount(entrySoup, link):
 # 	'''takes a soup & a link and returns associated comment count for either legacy or disqus'''
@@ -446,7 +447,7 @@ def getEntryOrgs(basicMeta, cliffData, link):
 						'entityCount': o['count'],
 						'entityName': o['name'].encode('ascii','ignore'),
 						'entityType': 'organization',
-						'entry_url': link, 
+						'entry_link': link, 
 					  }
 			thisOrg.update(basicMeta)
 			organizations.append(thisOrg)
@@ -463,7 +464,7 @@ def getEntryPeople(basicMeta, cliffData, link):
 			thisPerson = {
 						'entityCount': p['count'],
 						'entityName': p['name'].encode('ascii','ignore'),
-						'entry_url': link, 
+						'entry_link': link, 
 						'entityType': 'person'
 					  }
 			thisPerson.update(basicMeta)
@@ -484,7 +485,7 @@ def getEntryPlaces(basicMeta, cliffData, link):
 						'latitude': m['lat'],
 						'longitude': m['lon'],
 						'population': m['population'],
-						'entry_url': link, 
+						'entry_link': link, 
 					  }
 			thisPlace.update(basicMeta)
 			places.append(thisPlace)

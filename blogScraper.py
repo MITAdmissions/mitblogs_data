@@ -24,7 +24,6 @@ x = open(toScrape)
 links = []
 links = x.read().splitlines()
 
-debug = [] 
 #start looping like bruce willis
 for link in links:
 
@@ -39,9 +38,7 @@ for link in links:
 
 	#if 'Becca H.' in getEntryAuthor(entrySoup): becca = becca + 1; continue
 	
-	##start loading into dicts using functions from scrapeBlogs
-	
-	#make a dict of entry metadata & stats 
+	#make a dict of entry metadata + stats & load into database 
 	print 'getting meta'
 	entryMeta = {
 					'author_course': getAuthorCourse(entrySoup),
@@ -56,24 +53,32 @@ for link in links:
 	entryMeta.update(basicMeta)
 	insertMetaData(entryMeta)
 
-	#make a dict of entry full-text content & meta 
+	#make a dict of entry full-text content + meta & load into database 
 	print 'getting content'
 	entryContent = {
 					'entry_text': entryText,
 	}
 	entryContent.update(basicMeta)
+	insertEntryContent(entryContent)
 
 	print 'getting comments'
-	#get a list of dicts representing full text comments associated w/ entry 
+	#get a list of dicts representing full text comments associated w/ entry & load into database 
 	entryComments = getEntryComments(entrySoup, link)
+	for c in entryComments:
+		insertComments(c)
 
 	print 'getting entities'
-	#get a list of dicts representing entitites mentioned in the entry 
+	#get a list of dicts representing entitites mentioned in the entry & load into database 
 	entitiesMentioned = getEntryOrgs(basicMeta, cliffData, link)
 	entitiesMentioned.append(getEntryPeople(basicMeta, cliffData, link))
+	for e in entitiesMentioned:
+		print e.keys()
+		insertEntities(e)
 
 	print 'getting places'
-	#get a list of dicts representing places mentioned in the entry
+	#get a list of dicts representing places mentioned in the entry & load into database 
 	placesMentioned = getEntryPlaces(basicMeta, cliffData, link)
+	for p in placesMentioned:
+		insertPlaces(p)
 
 
