@@ -12,12 +12,10 @@ import dstk										#to do DATA SCIENCE
 import string									#to do fancy string operations
 import urllib, urllib2 							#to load URLs 
 import json 									#to parse api strings 						
-import time 									#to compute time 
-import re 										#to use regex 	
+import time 									#to compute time 	
+import requests									#for API stuff
 from datetime import datetime, timedelta, date 	#to convert time  
 from bs4 import BeautifulSoup					#to scrape through html
-from readability_score.calculators.fleschkincaid import *
-from hyphenator import Hyphenator	 
 
 ##load some private resources for later calling 
 #set link for testing
@@ -34,6 +32,10 @@ cliffServer = c.read()
 #get the API key for google analytics
 g = open('../RESOURCES/google_api_key.txt') 
 googleKey = g.read()
+
+#get the OAuth JSON for google analytics
+o = open('../RESOURCES/google_oauth.json') 
+googleAuth = o.read()
 
 #define some base URLs for later requests 
 fbBase = 'https://api.facebook.com/method/links.getStats?urls=%%'
@@ -71,18 +73,15 @@ def getBlogLinks(num):
 	blogLinks.close()
 	return filename
 
-#getting names & types of bloggers  
 def getSomeBloggers(link):
-	'''takes a link & returns a list of bloggers in that link's soup \n 
-	(example link: http://mitadmissions.org/blogs/group/students) \n
-	(could/should probably rewrite later to take a type & return that list)'''
+	'''takes a link & returns a list of bloggers in that link's soup'''
 	theseBloggers = []
 	theseBloggersHTML = urllib2.urlopen(link).read()
 	theseBloggersSoup = BeautifulSoup(theseBloggersHTML)
 
 	#find blogger names (formatted w/ the h5 tag)
 	theseBloggersNames = theseBloggersSoup.find_all("h5")
-	
+
 	#loop through the soup grabbing blogger names & appending to list 
 	for t in theseBloggersNames:
 		theseBloggers.append(t.string.encode('ascii','ignore'))
@@ -115,6 +114,12 @@ def getAllBloggers():
 
 
 #getting entry metadata
+def getEntryPath(link): 
+	'''takes a link and returns the unique part (after the last slash) as a string'''
+	path = link.rsplit('/')[-1]
+	return path 
+
+
 def getEntrySoup(link):
 	'''takes a link and returns BeautifulSoup object of the associated entry'''
 	entryHTML = urllib2.urlopen(link).read()
@@ -125,6 +130,12 @@ def getEntryAuthor(entrySoup):
 	'''takes soup & returns author of the entry'''
 	author = entrySoup.find(id='blogger-meta').find('h5').string.encode('ascii','ignore')
 	return author
+
+def getBloggerType(entrySoup, bloggers):
+	'''takes soup & dict, returns type of blogger''' 
+	author = getEntryAuthor(entrySoup)
+	bloggerType = bloggers.get(author)
+	return bloggerType
 
 
 def getAuthorCourse(entrySoup):
@@ -144,11 +155,14 @@ def getEntryTitle(entrySoup):
 	return title
 
 
-def getCategoriesList(entrySoup):
-	'''takes soup & returns the entry's categories as a list'''
-		#get post categories & add to a string (structure would be nice later)
+def getCategories(entrySoup):
+	'''takes soup & returns the entry's categories as a string'''
 	cats = entrySoup.find('p', class_='categories').find_all('a')
-	return cats
+	categories = ''
+	for c in cats:
+		thisCat = c.string.encode('ascii', 'ignore')
+		categories = categories + thisCat + ' '
+	return categories
 
 
 def getEntryDateTime(entrySoup):
@@ -175,10 +189,12 @@ def getEntryDateTime(entrySoup):
 	}
 	return entryDateTime 
 
-def getBasicMeta(entrySoup):
-	'''takes soup & returns basic, commonly used metadata'''
+def getBasicMeta(entrySoup, link):
+	'''takes soup & link, returns basic, commonly used metadata'''
 	basicMeta = {
 					'entry_author': getEntryAuthor(entrySoup),
+					'entry_title': getEntryTitle(entrySoup),
+					'entry_link': link,
 					}
 	basicMeta.update(getEntryDateTime(entrySoup))
 	return basicMeta
@@ -275,7 +291,7 @@ def getCommentSentiment(commentText):
 def getLegacyComments(entrySoup, link):
 	'''takes soup & link and returns a list of dicts for comments associated w/ that entry'''
 	#get the basic meta for the associated entry 
-	basicMeta = getBasicMeta(entrySoup)
+	basicMeta = getBasicMeta(entrySoup, link)
 
 	#construct a list of soup components which have a comment class 
 	rawComments = entrySoup.find_all('div', id='', class_='comment')
@@ -330,7 +346,7 @@ def getLegacyComments(entrySoup, link):
 def getDisqusComments(entrySoup, link):
 	'''takes soup & link and returns a list of dicts for comments associated w/ that entry'''
 	#get basicMeta for this Soup
-	basicMeta = getBasicMeta(entrySoup)
+	basicMeta = getBasicMeta(entrySoup, link)
 
 	#create a place to put the comments 
 	cleanedComments = [] 
@@ -374,9 +390,10 @@ def getDisqusComments(entrySoup, link):
 def getEntryComments(entrySoup, link):
 	'''takes soup & link, returns dict of comments associated w/ entry)'''
 	if getEntryCommentSystem(entrySoup) == 'legacy':
-		return getLegacyComments(entrySoup, link)
+		comments = getLegacyComments(entrySoup, link)
 	else:
-		return getDisqusComments(entrySoup, link)
+		comments = getDisqusComments(entrySoup, link)
+	return comments
 
 #getting analytics from web & social media 
 def getEntryFBData(link):
@@ -391,7 +408,7 @@ def getEntryFBData(link):
 				'FB_LIKES': fbl,
 				'FB_SHARES': fbs,
 				'FB_COMMENTS': fbc,
-				'FB_ENGAGEMENT': fbt,
+				'FB_TOTAL': fbt,
 				}
 	return fbData
 
@@ -426,8 +443,9 @@ def getEntryOrgs(basicMeta, cliffData, link):
 	if cliffData['results']['organizations'] != None: 
 		for o in cliffData['results']['organizations']:
 			thisOrg = {
-						'orgCount': o['count'].encode('ascii','ignore'),
-						'orgName': o['name'].encode('ascii','ignore'),
+						'entityCount': o['count'],
+						'entityName': o['name'].encode('ascii','ignore'),
+						'entityType': 'organization',
 						'entry_url': link, 
 					  }
 			thisOrg.update(basicMeta)
@@ -443,9 +461,10 @@ def getEntryPeople(basicMeta, cliffData, link):
 	if cliffData['results']['people'] != None: 
 		for p in cliffData['results']['people']:
 			thisPerson = {
-						'personCount': p['count'],
-						'personName': p['name'].encode('ascii','ignore'),
+						'entityCount': p['count'],
+						'entityName': p['name'].encode('ascii','ignore'),
 						'entry_url': link, 
+						'entityType': 'person'
 					  }
 			thisPerson.update(basicMeta)
 			people.append(thisPerson)
