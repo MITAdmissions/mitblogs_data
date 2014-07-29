@@ -29,33 +29,33 @@ csvs = {
 def initializeDatabase():
 	#create table for entry metadata
 	db.execute('''CREATE TABLE IF NOT EXISTS entry_metadata (entry_author text, entry_title text,
-				 	 entry_date date, entry_stamp timestamp, entry_delta int, 
+				 	 entry_date text, entry_stamp timestamp, entry_delta int, 
 				 	 entry_link text, author_course text, 
 				 	 blogger_type text, categories text, comment_system text,
-				 	 comment_count int, tweet_count int, fbtotal_count int,
-				 	 wordcount int)''')
+				 	 comment_count int, unique_pageviews int, tweet_count int, 
+				 	 fbtotal_count int, wordcount int)''')
 
 	#create table for entry content
 	db.execute('''CREATE TABLE IF NOT EXISTS entry_content (entry_author text, entry_title text,
-				 	 entry_date date, entry_stamp timestamp, entry_delta int, 
+				 	 entry_date text, entry_stamp timestamp, entry_delta int, 
 				 	 entry_link text, entry_text text)''')
 
 	#create table for comments
 	db.execute('''CREATE TABLE IF NOT EXISTS entry_comments (entry_author text, entry_title text,
-				 	 entry_date date, entry_stamp timestamp, entry_delta int, 
+				 	 entry_date text, entry_stamp timestamp, entry_delta int, 
 				 	 entry_link text, commenter text, comment_date text, comment_stamp timestamp,
 				 	 comment_text text, comment_system text, comment_sentiment int,
 				 	 comment_num int)''')
 
 	#create table for entities mentioned
 	db.execute('''CREATE TABLE IF NOT EXISTS entry_entities (entry_author text, entry_title text,
-				 	 entry_date date, entry_stamp timestamp, entry_delta int, 
+				 	 entry_date text, entry_stamp timestamp, entry_delta int, 
 				 	 entry_link text, entityCount int, entityName text, 
 				 	 entityType text)''')
 
 	#create table for places mentioned
 	db.execute('''CREATE TABLE IF NOT EXISTS entry_places (entry_author text, entry_title text,
-				 	 entry_date date, entry_stamp timestamp, entry_delta int, 
+				 	 entry_date text, entry_stamp timestamp, entry_delta int, 
 				 	 entry_link text, placeName text, countryCode text, 
 				 	 latitude int, longitude int, population int)''')
 
@@ -66,7 +66,7 @@ def insertMetaData(entryMeta):
 	sql += 'INSERT OR IGNORE INTO entry_metadata ('
 	sql += ', '.join(entryMeta.keys())
 	sql += ')'
-	sql += ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+	sql += ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
 	db.execute(sql, entryMeta.values())
 	conn.commit()
 

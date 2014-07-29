@@ -18,8 +18,7 @@ from datetime import datetime, timedelta, date 	#to convert time
 from bs4 import BeautifulSoup					#to scrape through html
 
 ##load some private resources for later calling 
-#set link for testing
-testlink = 'http://mitadmissions.org/blogs/entry/blogger-application-2014'
+today = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d')
 
 #get the API key for disqus
 f = open('../RESOURCES/disqus_api_key.txt') 
@@ -29,8 +28,8 @@ disqusKey = f.read()
 c = open('../RESOURCES/civic_cliff_server.txt')
 cliffServer = c.read() 
 
-#get the API key for google analytics
-g = open('../RESOURCES/google_api_key.txt') 
+#get the token for google analytics
+g = open('../RESOURCES/google_token.txt') 
 googleKey = g.read()
 
 #get the OAuth JSON for google analytics
@@ -44,6 +43,11 @@ disqusCountBase = 'http://disqus.com/api/3.0/threads/list.json?api_key='
 disqusContentBase = 'http://disqus.com/api/3.0/posts/list.json?api_key='
 disqusMid = '&forum=mitadmissions&thread=link:'
 countTweets = 'http://urls.api.twitter.com/1/urls/count.json?url='
+googleBase = 'https://www.googleapis.com/analytics/v3/data/ga?ids=ga:22035378&max-results=1&metrics=ga:uniquePageviews&start-date=2009-08-10&token_type=bearer'
+googleEndDate = '&end-date=' + today
+googlePath = '&filters=ga:pagePathLevel3==/' #(append linkpath)
+googleToken = '&access_token=' + googleKey
+
 
 #initiate a DSTK instance (eventually use my own server, not the public one )
 dstk = dstk.DSTK()
@@ -111,7 +115,7 @@ def getAllBloggers():
 
 
 #getting entry metadata
-def getEntryPath(link): 
+def getLinkPath(link): 
 	'''takes a link and returns the unique part (after the last slash) as a string'''
 	path = link.rsplit('/')[-1]
 	return path 
@@ -383,9 +387,12 @@ def getTweetCount(link):
 	count = data['count']
 	return count 
 
-#def getGoogleAnalyticsData(link):
-	'''takes a link and returns # of unique pageviews from GA'''
-
+def getGoogleAnalyticsData(link):
+	'''takes a link and returns count of unique pageviews from GA'''
+	req = googleBase + googleToken + googleEndDate + googlePath + getLinkPath(link)
+	data = json.loads((urllib2.urlopen(req).read()))
+	count = int(data['totalsForAllResults']['ga:uniquePageviews'])
+	return count
 
 #getting entity extraction data from CLIFF 
 def getCLIFFData(entryText):

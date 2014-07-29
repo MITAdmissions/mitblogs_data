@@ -48,6 +48,7 @@ for link in links:
 					'comment_count': getEntryCommentCount(entrySoup, link),
 					'tweet_count': getTweetCount(link),
 					'fbtotal_count': getEntryFBData(link)['FB_TOTAL'],
+					'unique_pageviews': getGoogleAnalyticsData(link),
 					'wordcount': getEntryWords(entryText),
 	}
 	entryMeta.update(basicMeta)
