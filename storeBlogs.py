@@ -124,3 +124,11 @@ def writeCSV(info, csvName):
 	#else, just write the values 
 	else:
 		DW.writer.writerow(info.values())
+
+#for writing data to textfile
+def writeTXT(thisLine, typeLines):
+	'''takes a string & a type and writes it to a text file'''
+	#open the file
+	f = open('../DATADUMP/blogtxt/' + typeLines + ' as of ' + now + '.txt')
+	f.write("%s\n" % thisLine)
+	f.close()

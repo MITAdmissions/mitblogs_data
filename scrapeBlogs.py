@@ -205,6 +205,21 @@ def getEntryText(entryHTML):
 		entryText = entryText + l + ' ' 
 	return entryText
 
+def getEntryLines(entryHTML):
+	'''takes entryHTML, runs it against the DSTK story extractor, & returns a list of lines''' 
+	#run the HTML against DSTK's boilerpipe story detection service  
+	text = dstk.html2story(entryHTML)
+
+	#grab the value of the returned dict & read it into an ASCII string 
+	textstring = text['story'].encode('ascii','ignore')
+
+	#split at newline character for cleaning & counting 
+	lines = textstring.split('\n')
+
+	#remove the categories entry w/ comes first & the last two blank spaces 
+	lines.pop(0)
+	return lines
+
 def getEntryWords(entryText):
 	'''takes a string of an entry's text & returns count of words based on whitespace split''' 
 	words = entryText.split(' ')
