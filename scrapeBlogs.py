@@ -3,9 +3,6 @@
 # by @peteyreplies
 ####
 
-##petey todo 
-# - add google analytics function 
-
 ##import various libraries we will need 
 import nltk 									#for hitting CLIFF 
 import dstk										#to do DATA SCIENCE
@@ -109,9 +106,8 @@ def getEntryHTML(link):
 	entryHTML = urllib2.urlopen(link).read()
 	return entryHTML
 
-def getEntrySoup(link):
-	'''takes a link and returns BeautifulSoup object of the associated entry'''
-	entryHTML = urllib2.urlopen(link).read()
+def getEntrySoup(entryHTML):
+	'''takes entryHTML and returns BeautifulSoup object of the associated entry'''
 	entrySoup = BeautifulSoup(entryHTML)
 	return entrySoup
 
@@ -189,11 +185,8 @@ def getBasicMeta(entrySoup, link):
 	basicMeta.update(getEntryDateTime(entrySoup))
 	return basicMeta
 
-def getEntryText(link):
-	'''takes a link, runs it against the DSTK story extractor, & returns a string of the entry''' 
-	#get the entryHTML anew 
-	entryHTML = getEntryHTML(link)
-
+def getEntryText(entryHTML):
+	'''takes entryHTML, runs it against the DSTK story extractor, & returns a string of the entry''' 
 	#run the HTML against DSTK's boilerpipe story detection service  
 	text = dstk.html2story(entryHTML)
 

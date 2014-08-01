@@ -32,8 +32,9 @@ for link in links:
 	print link
 
 	#make static calls and protect against becca 
-	entrySoup = getEntrySoup(link)
-	entryText = getEntryText(link)
+	entryHTML = getEntryHTML(link)
+	entrySoup = getEntrySoup(entryHTML)
+	entryText = getEntryText(entryHTML)
 	basicMeta = getBasicMeta(entrySoup, link)
 	cliffData = getCLIFFData(entryText)
 
