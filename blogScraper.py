@@ -6,6 +6,7 @@
 #import libraries
 from scrapeBlogs import * 					#bespoke functions for scraping the blogs
 from storeBlogs import *					#bespoke functions for storing the blogs
+from googleData import * 					#hack to get Google Analytics data
 
 #scrape last 100 bloglinks & save to file
 toScrape = getBlogLinks(20)
@@ -31,8 +32,9 @@ for link in links:
 	print link
 
 	#make static calls and protect against becca 
-	entrySoup = getEntrySoup(link)
-	entryText = getEntryText(link)
+	entryHTML = getEntryHTML(link)
+	entrySoup = getEntrySoup(entryHTML)
+	entryText = getEntryText(entryHTML)
 	basicMeta = getBasicMeta(entrySoup, link)
 	cliffData = getCLIFFData(entryText)
 
@@ -48,7 +50,7 @@ for link in links:
 					'comment_count': getEntryCommentCount(entrySoup, link),
 					'tweet_count': getTweetCount(link),
 					'fbtotal_count': getEntryFBData(link)['FB_TOTAL'],
-					'unique_pageviews': getGoogleAnalyticsData(link),
+					'unique_pageviews': getGooglePageviews(getLinkPath(link)),
 					'wordcount': getEntryWords(entryText),
 	}
 	entryMeta.update(basicMeta)

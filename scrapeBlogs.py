@@ -3,9 +3,6 @@
 # by @peteyreplies
 ####
 
-##petey todo 
-# - add google analytics function 
-
 ##import various libraries we will need 
 import nltk 									#for hitting CLIFF 
 import dstk										#to do DATA SCIENCE
@@ -13,28 +10,15 @@ import string									#to do fancy string operations
 import urllib, urllib2 							#to load URLs 
 import json 									#to parse api strings 						
 import time 									#to compute time 	
-import requests									#for API stuff
 from datetime import datetime, timedelta, date 	#to convert time  
 from bs4 import BeautifulSoup					#to scrape through html
 
 ##load some private resources for later calling 
 today = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d')
 
-#get the API key for disqus
-f = open('../RESOURCES/disqus_api_key.txt') 
-disqusKey = f.read()
-
-#get the URL for Civic CLIFF production server (eventually use my own)
-c = open('../RESOURCES/civic_cliff_server.txt')
-cliffServer = c.read() 
-
-#get the token for google analytics
-g = open('../RESOURCES/google_token.txt') 
-googleKey = g.read()
-
-#get the OAuth JSON for google analytics
-#o = open('../RESOURCES/google_oauth.json') 
-#googleAuth = o.read()
+#load API keys & other credentials 
+disqusKey = (open('../RESOURCES/disqus_api_key.txt')).read() 
+cliffServer = (open('../RESOURCES/civic_cliff_server.txt')).read()
 
 #define some base URLs for later requests 
 fbBase = 'https://api.facebook.com/method/links.getStats?urls=%%'
@@ -43,14 +27,11 @@ disqusCountBase = 'http://disqus.com/api/3.0/threads/list.json?api_key='
 disqusContentBase = 'http://disqus.com/api/3.0/posts/list.json?api_key='
 disqusMid = '&forum=mitadmissions&thread=link:'
 countTweets = 'http://urls.api.twitter.com/1/urls/count.json?url='
-googleBase = 'https://www.googleapis.com/analytics/v3/data/ga?ids=ga:22035378&max-results=1&metrics=ga:uniquePageviews&start-date=2009-08-10&token_type=bearer'
-googleEndDate = '&end-date=' + today
-googlePath = '&filters=ga:pagePathLevel3==/' #(append linkpath)
-googleToken = '&access_token=' + googleKey
 
-
-#initiate a DSTK instance (eventually use my own server, not the public one )
-dstk = dstk.DSTK()
+#initiate a DSTK instance (use private server once RAM upgraded)
+ds = (open('../RESOURCES/admdstk.txt')).read()
+dstk = dstk.DSTK({'apiBase':ds})
+#dstk = dstk.DSTK()
 
 ##define custom functions
 #getting links to be analyzed 
@@ -58,7 +39,7 @@ def getBlogLinks(num):
 	'''scrapes however many pages of blogs are passed, writes to text file, returns filename'''
 	#setup the file this will be written to 
 	now = datetime.fromtimestamp(time.time()).strftime(' as of %b %d %Y at %H_%M')
-	filename = '../DATADUMP/bloglinks/'+ str(num) + 'BlogsLinks' + now + '.txt'
+	filename = '../DATADUMP/bloglinks/'+ str(num) + ' BlogsLinks' + now + '.txt'
 	blogLinks = open(filename,'a')
 	baseURL = "http://mitadmissions.org/blogs/P"
 	p = 0
@@ -120,10 +101,13 @@ def getLinkPath(link):
 	path = link.rsplit('/')[-1]
 	return path 
 
-
-def getEntrySoup(link):
-	'''takes a link and returns BeautifulSoup object of the associated entry'''
+def getEntryHTML(link):
+	'''takes a link and returns the entry's HTML'''
 	entryHTML = urllib2.urlopen(link).read()
+	return entryHTML
+
+def getEntrySoup(entryHTML):
+	'''takes entryHTML and returns BeautifulSoup object of the associated entry'''
 	entrySoup = BeautifulSoup(entryHTML)
 	return entrySoup
 
@@ -201,12 +185,9 @@ def getBasicMeta(entrySoup, link):
 	basicMeta.update(getEntryDateTime(entrySoup))
 	return basicMeta
 
-def getEntryText(link):
-	'''takes a link, runs it against the DSTK story extractor, & returns a string of the entry''' 
-	#get the entryHTML anew 
-	entryHTML = urllib2.urlopen(link).read()
-
-	#run the HTML against DSTK's boilerplate story detection service  
+def getEntryText(entryHTML):
+	'''takes entryHTML, runs it against the DSTK story extractor, & returns a string of the entry''' 
+	#run the HTML against DSTK's boilerpipe story detection service  
 	text = dstk.html2story(entryHTML)
 
 	#grab the value of the returned dict & read it into an ASCII string 
@@ -223,6 +204,21 @@ def getEntryText(link):
 	for l in lines:
 		entryText = entryText + l + ' ' 
 	return entryText
+
+def getEntryLines(entryHTML):
+	'''takes entryHTML, runs it against the DSTK story extractor, & returns a list of lines''' 
+	#run the HTML against DSTK's boilerpipe story detection service  
+	text = dstk.html2story(entryHTML)
+
+	#grab the value of the returned dict & read it into an ASCII string 
+	textstring = text['story'].encode('ascii','ignore')
+
+	#split at newline character for cleaning & counting 
+	lines = textstring.split('\n')
+
+	#remove the categories entry w/ comes first & the last two blank spaces 
+	lines.pop(0)
+	return lines
 
 def getEntryWords(entryText):
 	'''takes a string of an entry's text & returns count of words based on whitespace split''' 
@@ -386,13 +382,6 @@ def getTweetCount(link):
 	data = json.loads((urllib2.urlopen(countTweets + link).read()))
 	count = data['count']
 	return count 
-
-def getGoogleAnalyticsData(link):
-	'''takes a link and returns count of unique pageviews from GA'''
-	req = googleBase + googleToken + googleEndDate + googlePath + getLinkPath(link)
-	data = json.loads((urllib2.urlopen(req).read()))
-	count = int(data['totalsForAllResults']['ga:uniquePageviews'])
-	return count
 
 #getting entity extraction data from CLIFF 
 def getCLIFFData(entryText):
