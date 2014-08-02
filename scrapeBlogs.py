@@ -185,25 +185,6 @@ def getBasicMeta(entrySoup, link):
 	basicMeta.update(getEntryDateTime(entrySoup))
 	return basicMeta
 
-def getEntryText(entryHTML):
-	'''takes entryHTML, runs it against the DSTK story extractor, & returns a string of the entry''' 
-	#run the HTML against DSTK's boilerpipe story detection service  
-	text = dstk.html2story(entryHTML)
-
-	#grab the value of the returned dict & read it into an ASCII string 
-	textstring = text['story'].encode('ascii','ignore')
-
-	#split at newline character for cleaning & counting 
-	lines = textstring.split('\n')
-
-	#remove the categories entry w/ comes first & the last two blank spaces 
-	lines.pop(0)
-
-	#now reconstruct into a string 
-	entryText = ''
-	for l in lines:
-		entryText = entryText + l + ' ' 
-	return entryText
 
 def getEntryLines(entryHTML):
 	'''takes entryHTML, runs it against the DSTK story extractor, & returns a list of lines''' 
@@ -219,6 +200,13 @@ def getEntryLines(entryHTML):
 	#remove the categories entry w/ comes first & the last two blank spaces 
 	lines.pop(0)
 	return lines
+
+def getEntryText(entryLines):
+	'''takes a list of lines in an entry and returns a string of them all stuck together'''
+	entryText = ''
+	for l in entryLines:
+		entryText = entryText + l + ' ' 
+	return entryText
 
 def getEntryWords(entryText):
 	'''takes a string of an entry's text & returns count of words based on whitespace split''' 
@@ -287,8 +275,8 @@ def getLegacyComments(entrySoup, link):
 			user = user + u + ' '
 		user = user.rstrip(' ')
 
-		#last, grab the text of the comment 
-		text = c.getText().replace(posted,'').replace('\n',' ').encode('ascii','ignore')
+		#last, grab the textstring of the comment 
+		textstring = c.getText().replace(posted,'').replace('\n',' ').encode('ascii','ignore')
 
 		#what type of comment is this? 
 		system = 'legacy'
@@ -296,9 +284,9 @@ def getLegacyComments(entrySoup, link):
 						'commenter': user,
 						'comment_date':date,
 						'comment_stamp': stamp,
-						'comment_text': text,
+						'comment_text': textstring,
 						'comment_system': system,
-						'comment_sentiment': getCommentSentiment(text),
+						'comment_sentiment': getCommentSentiment(textstring),
 						'comment_num': num,
 						'entry_link':link, 
 											}
@@ -323,7 +311,7 @@ def getDisqusComments(entrySoup, link):
 	num = len(disqusData['response'])
 	for c in disqusData['response']: 
 		#get the text of the comment 
-		text = c['raw_message'].encode('ascii','ignore')
+		textstring = c['raw_message'].encode('ascii','ignore')
 
 		#get the commenter's name 
 		user = c['author']['name'].encode('ascii','ignore')
@@ -339,10 +327,10 @@ def getDisqusComments(entrySoup, link):
 						'commenter': user,
 						'comment_date':date,
 						'comment_stamp': stamp,
-						'comment_text': text,
+						'comment_text': textstring,
 						'comment_system': system,
 						'comment_num': num, 
-						'comment_sentiment': getCommentSentiment(text),
+						'comment_sentiment': getCommentSentiment(textstring),
 						'entry_link': link, 
 											}
 		thisComment.update(basicMeta)

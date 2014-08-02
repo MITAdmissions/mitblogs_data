@@ -34,7 +34,8 @@ for link in links:
 	#make static calls and protect against becca 
 	entryHTML = getEntryHTML(link)
 	entrySoup = getEntrySoup(entryHTML)
-	entryText = getEntryText(entryHTML)
+	entryLines = getEntryLines(entryHTML)
+	entryText = getEntryText(entryLines)
 	basicMeta = getBasicMeta(entrySoup, link)
 	cliffData = getCLIFFData(entryText)
 
@@ -72,6 +73,7 @@ for link in links:
 	for c in entryComments:
 		insertComments(c)
 		writeCSV(c, 'entry_comments')
+		writeTXT(c['comment_text'],'commentLines')
 
 	print 'getting entities'
 	#get a list of dicts representing entitites mentioned in the entry & load into database 
@@ -88,6 +90,11 @@ for link in links:
 	for p in placesMentioned:
 		insertPlaces(p)
 		writeCSV(p, 'entry_places')
+
+	print 'writing lines'
+	#gets the lines of the entry & writes them to a text file for feeding @mitblogs_ebooks
+	for thisLine in entryLines:
+		writeTXT(thisLine, 'entryLines')
 
 print 'becca count = ' + str(becca)
 print 'done!'
