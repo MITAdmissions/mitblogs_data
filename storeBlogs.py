@@ -44,7 +44,7 @@ def initializeDatabase():
 	db.execute('''CREATE TABLE IF NOT EXISTS entry_comments (entry_author text, entry_title text,
 				 	 entry_date text, entry_stamp timestamp, entry_delta int, 
 				 	 entry_link text, commenter text, comment_date text, comment_stamp timestamp,
-				 	 comment_text text, comment_system text, comment_sentiment int,
+				 	 comment_text text, comment_system text,
 				 	 comment_num int)''')
 
 	#create table for entities mentioned
@@ -86,7 +86,7 @@ def insertComments(c):
 	sql += 'INSERT OR IGNORE INTO entry_comments ('
 	sql += ', '.join(c.keys())
 	sql += ')'
-	sql += ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)'
+	sql += ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
 	db.execute(sql, c.values())
 	conn.commit()
 
@@ -129,6 +129,6 @@ def writeCSV(info, csvName):
 def writeTXT(thisLine, typeLines):
 	'''takes a string & a type and writes it to a text file'''
 	#open the file
-	f = open('../DATADUMP/blogtxt/' + typeLines + ' as of ' + now + '.txt')
+	f = open('../DATADUMP/blogtxt/' + typeLines + ' as of ' + now + '.txt', 'a')
 	f.write("%s\n" % thisLine)
 	f.close()

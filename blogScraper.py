@@ -8,14 +8,19 @@ from scrapeBlogs import * 					#bespoke functions for scraping the blogs
 from storeBlogs import *					#bespoke functions for storing the blogs
 from googleData import * 					#hack to get Google Analytics data
 
-#scrape last 100 bloglinks & save to file
-toScrape = getBlogLinks(20)
+#scrape last 20 bloglinks & save to file (4660 for production as of 8/4/14)
+#toScrape = getBlogLinks(4660)
+
+#or, load some recently scraped list of links to not start anew
+toScrape = '../DATADUMP/bloglinks/4660 BlogsLinks as of Aug 04 2014 at 11_26.txt'
 
 #load all the bloggers & their types
 bloggers = getAllBloggers()
 
-#make a count for becca
+#make a count for link & for becca
+i = 1
 becca = 0
+totalTime = 0
 
 #create database
 initializeDatabase()
@@ -28,10 +33,12 @@ links = x.read().splitlines()
 #start looping like bruce willis
 for link in links:
 
-	#print the link for debugging 
-	print link
+	#print the link & time for debugging 
+	print str(i) + ': ' + link
+	start = time.time()
 
-	#make static calls and protect against becca 
+	#make static calls and protect against becca
+	print 'loading static' 
 	entryHTML = getEntryHTML(link)
 	entrySoup = getEntrySoup(entryHTML)
 	entryLines = getEntryLines(entryHTML)
@@ -51,7 +58,7 @@ for link in links:
 					'comment_count': getEntryCommentCount(entrySoup, link),
 					'tweet_count': getTweetCount(link),
 					'fbtotal_count': getEntryFBData(link)['FB_TOTAL'],
-					'unique_pageviews': getGooglePageviews(getLinkPath(link)),
+					'unique_pageviews': getGooglePageviews(getLinkPath(link), 0),
 					'wordcount': getEntryWords(entryText),
 	}
 	entryMeta.update(basicMeta)
@@ -76,25 +83,39 @@ for link in links:
 		writeTXT(c['comment_text'],'commentLines')
 
 	print 'getting entities'
-	#get a list of dicts representing entitites mentioned in the entry & load into database 
-	orgs = getEntryOrgs(basicMeta, cliffData, link)
-	people = getEntryPeople(basicMeta, cliffData, link)
-	entitiesMentioned = orgs + people
-	for e in entitiesMentioned:
-		insertEntities(e)
-		writeCSV(e, 'entry_entities')
+	#get a list of dicts representing entitites mentioned in the entry & load into database
+	try: 
+		orgs = getEntryOrgs(basicMeta, cliffData, link)
+		people = getEntryPeople(basicMeta, cliffData, link)
+		entitiesMentioned = orgs + people
+		for e in entitiesMentioned:
+			insertEntities(e)
+			writeCSV(e, 'entry_entities')
+	except KeyError:
+		print 'NO ENTITIES'
+
 
 	print 'getting places'
 	#get a list of dicts representing places mentioned in the entry & load into database 
-	placesMentioned = getEntryPlaces(basicMeta, cliffData, link)
-	for p in placesMentioned:
-		insertPlaces(p)
-		writeCSV(p, 'entry_places')
+	try: 
+		placesMentioned = getEntryPlaces(basicMeta, cliffData, link)
+		for p in placesMentioned:
+			insertPlaces(p)
+			writeCSV(p, 'entry_places')
+	except KeyError:
+		print 'NO PLACES'
 
 	print 'writing lines'
 	#gets the lines of the entry & writes them to a text file for feeding @mitblogs_ebooks
 	for thisLine in entryLines:
 		writeTXT(thisLine, 'entryLines')
 
+	i = i + 1
+	elapsed = time.time() - start
+	print 'took ' + str(elapsed) + ' seconds'
+	totalTime = totalTime + elapsed
+	#end loop
+
+print 'total time = ' + str(totalTime) + ' seconds'
 print 'becca count = ' + str(becca)
 print 'done!'

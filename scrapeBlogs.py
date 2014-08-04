@@ -10,6 +10,7 @@ import string									#to do fancy string operations
 import urllib, urllib2 							#to load URLs 
 import json 									#to parse api strings 						
 import time 									#to compute time 	
+from time import sleep							#to delay server hits
 from datetime import datetime, timedelta, date 	#to convert time  
 from bs4 import BeautifulSoup					#to scrape through html
 
@@ -188,17 +189,33 @@ def getBasicMeta(entrySoup, link):
 
 def getEntryLines(entryHTML):
 	'''takes entryHTML, runs it against the DSTK story extractor, & returns a list of lines''' 
-	#run the HTML against DSTK's boilerpipe story detection service  
-	text = dstk.html2story(entryHTML)
-
-	#grab the value of the returned dict & read it into an ASCII string 
-	textstring = text['story'].encode('ascii','ignore')
-
+	#run the HTML against DSTK's boilerpipe story detection service 
+	#on admdstk this sometimes fails (due to inadequate CPU I think) so try a few times 
+	try:
+		text = dstk.html2story(entryHTML)
+		textstring = text['story'].encode('ascii','ignore')
+	except ValueError:
+		#try again
+		try: 
+			sleep (2)
+			text = dstk.html2story(entryHTML)
+			textstring = text['story'].encode('ascii','ignore')
+		except ValueError: 
+			#third time's the charm:
+			try:
+				sleep (2) 
+				text = dstk.html2story(entryHTML)
+				textstring = text['story'].encode('ascii','ignore')
+			except ValueError:
+				print 'HTML2STORY FAILED THREE TIMES!'
+				textstring = 'JSONERROR'
+	
 	#split at newline character for cleaning & counting 
 	lines = textstring.split('\n')
 
-	#remove the categories entry w/ comes first & the last two blank spaces 
-	lines.pop(0)
+	#remove the categories entry w/ comes first if it's there 
+	if 'Posted in:' in lines[0]:
+		lines.pop(0)
 	return lines
 
 def getEntryText(entryLines):
@@ -286,7 +303,7 @@ def getLegacyComments(entrySoup, link):
 						'comment_stamp': stamp,
 						'comment_text': textstring,
 						'comment_system': system,
-						'comment_sentiment': getCommentSentiment(textstring),
+						#'comment_sentiment': getCommentSentiment(textstring),
 						'comment_num': num,
 						'entry_link':link, 
 											}
@@ -330,7 +347,7 @@ def getDisqusComments(entrySoup, link):
 						'comment_text': textstring,
 						'comment_system': system,
 						'comment_num': num, 
-						'comment_sentiment': getCommentSentiment(textstring),
+						#'comment_sentiment': getCommentSentiment(textstring),
 						'entry_link': link, 
 											}
 		thisComment.update(basicMeta)
