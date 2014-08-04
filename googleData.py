@@ -22,7 +22,7 @@ f.close()
 email = (open('../RESOURCES/mygmail.txt')).read()
 scope = 'https://www.googleapis.com/auth/analytics.readonly'
 today = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d')
-storage = Storage('../RESOURCES/analytics.dat')
+storage = Storage('../DATADUMP/tmp/analytics.dat')
 
 def getGooglePageviews(linkpath, attempt):
 	'''takes a linkpath & attempt count, returns count of unique pageviews from Google Analytics'''
