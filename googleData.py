@@ -47,6 +47,7 @@ def getGooglePageviews(linkpath, attempt):
 			count = int(query['ga:uniquePageviews'])
 		except apiclient.errors.HttpError:
 			#try once again after 20 seconds 
+			print 'trying again'
 			attempt = attempt + 1
 			sleep (20)
 			return getGooglePageviews(linkpath, attempt)

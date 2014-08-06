@@ -244,7 +244,7 @@ def getEntryCommentSystem(entrySoup):
 
 def getEntryCommentCount(entrySoup, link):
 	'''takes a soup & link and returns associated comment count'''
-	if getEntryCommentSystem == 'legacy':
+	if getEntryCommentSystem(entrySoup) == 'legacy':
 		comments = len(entrySoup.find_all('div', id='', class_='comment'))
 	else:
 		disqusData = json.load(urllib2.urlopen(disqusCountBase + disqusKey + disqusMid + link))

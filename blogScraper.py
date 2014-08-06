@@ -12,7 +12,7 @@ from googleData import * 					#hack to get Google Analytics data
 #toScrape = getBlogLinks(4660)
 
 #or, load some recently scraped list of links to not start anew
-toScrape = '../DATADUMP/bloglinks/4660 BlogsLinks as of Aug 04 2014 at 11_26.txt'
+toScrape = '../DATADUMP/bloglinks/allLinks.txt'
 
 #load all the bloggers & their types
 bloggers = getAllBloggers()
@@ -41,12 +41,16 @@ for link in links:
 	print 'loading static' 
 	entryHTML = getEntryHTML(link)
 	entrySoup = getEntrySoup(entryHTML)
+
+	if 'Becca H.' in getEntryAuthor(entrySoup): 
+		print 'BECCA BROKE'
+		becca = becca + 1
+		continue
+
 	entryLines = getEntryLines(entryHTML)
 	entryText = getEntryText(entryLines)
 	basicMeta = getBasicMeta(entrySoup, link)
 	cliffData = getCLIFFData(entryText)
-
-	if 'Becca H.' in getEntryAuthor(entrySoup): becca = becca + 1; continue
 	
 	#make a dict of entry metadata + stats, then load into database + csv
 	print 'getting meta'
