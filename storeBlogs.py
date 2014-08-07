@@ -10,8 +10,8 @@ import time 								#to compute time
 from datetime import datetime, timedelta	#to convert time 
 
 #set time for this run or pull in current working doc
-#now = datetime.fromtimestamp(time.time()).strftime('as of %b %d %Y at %H_%M')
-now = 'as of Aug 04 2014 at 15_42'
+now = datetime.fromtimestamp(time.time()).strftime('as of %b %d %Y at %H_%M')
+#now = 'as of Aug 04 2014 at 15_42'
 
 #set db info for this run
 conn = sqlite3.connect('../DATADUMP/blogdb/blogData ' + now + '.db')
