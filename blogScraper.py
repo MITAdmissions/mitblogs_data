@@ -37,7 +37,7 @@ for link in links:
 	print str(i) + ': ' + link
 	start = time.time()
 
-	#make static calls and protect against becca
+	#make static calls and protect against becca, who breaks the scraper for some reason (sorry becca -___-)
 	print 'loading static' 
 	entryHTML = getEntryHTML(link)
 	entrySoup = getEntrySoup(entryHTML)
