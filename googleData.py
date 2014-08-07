@@ -1,5 +1,5 @@
 #####
-#code to get unique pageviews from google analytics
+#code to get unique pageviews for the blogs (since August 2009) from google analytics 
 #based on http://goo.gl/nOluHu, modified by @peteyreplies
 #####
 
