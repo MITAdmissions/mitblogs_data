@@ -9,10 +9,10 @@ from storeBlogs import *					#bespoke functions for storing the blogs
 from googleData import * 					#hack to get Google Analytics data
 
 #scrape last 20 bloglinks & save to file (4660 for production as of 8/4/14)
-#toScrape = getBlogLinks(4660)
+toScrape = getBlogLinks(300)
 
 #or, load some recently scraped list of links to not start anew
-toScrape = '../DATADUMP/bloglinks/allLinks.txt'
+#toScrape = '../DATADUMP/bloglinks/allLinks.txt'
 
 #load all the bloggers & their types
 bloggers = getAllBloggers()
@@ -47,10 +47,10 @@ for link in links:
 		becca = becca + 1
 		continue
 
-	entryLines = getEntryLines(entryHTML)
-	entryText = getEntryText(entryLines)
+	#entryLines = getEntryLines(entryHTML)
+	#entryText = getEntryText(entryLines)
 	basicMeta = getBasicMeta(entrySoup, link)
-	cliffData = getCLIFFData(entryText)
+	#cliffData = getCLIFFData(entryText)
 	
 	#make a dict of entry metadata + stats, then load into database + csv
 	print 'getting meta'
@@ -60,23 +60,25 @@ for link in links:
 					'categories': getCategories(entrySoup),
 					'comment_system': getEntryCommentSystem(entrySoup),
 					'comment_count': getEntryCommentCount(entrySoup, link),
-					'tweet_count': getTweetCount(link),
-					'fbtotal_count': getEntryFBData(link)['FB_TOTAL'],
+					#'tweet_count': getTweetCount(link),
+					#'fbtotal_count': getEntryFBData(link)['FB_TOTAL'],
 					'unique_pageviews': getGooglePageviews(getLinkPath(link), 0),
-					'wordcount': getEntryWords(entryText),
+					#'wordcount': getEntryWords(entryText),
 	}
 	entryMeta.update(basicMeta)
 	insertMetaData(entryMeta)
 	writeCSV(entryMeta, 'entry_metadata')
 
-	#make a dict of entry full-text content + meta & load into database 
-	print 'getting content'
-	entryContent = {
-					'entry_text': entryText,
-	}
-	entryContent.update(basicMeta)
-	insertEntryContent(entryContent)
-	writeCSV(entryContent, 'entry_content')
+# # 
+# 	#make a dict of entry full-text content + meta & load into database 
+# 	print 'getting content'
+# 	#entryContent = {
+# 					'entry_text': entryText,
+# 	}
+# 	entryContent.update(basicMeta)
+# 	insertEntryContent(entryContent)
+# 	writeCSV(entryContent, 'entry_content')
+# #
 
 	print 'getting comments'
 	#get a list of dicts representing full text comments associated w/ entry & load into database 
@@ -86,33 +88,33 @@ for link in links:
 		writeCSV(c, 'entry_comments')
 		writeTXT(c['comment_text'],'commentLines')
 
-	print 'getting entities'
-	#get a list of dicts representing entitites mentioned in the entry & load into database
-	try: 
-		orgs = getEntryOrgs(basicMeta, cliffData, link)
-		people = getEntryPeople(basicMeta, cliffData, link)
-		entitiesMentioned = orgs + people
-		for e in entitiesMentioned:
-			insertEntities(e)
-			writeCSV(e, 'entry_entities')
-	except KeyError:
-		print 'NO ENTITIES'
+	# print 'getting entities'
+	# #get a list of dicts representing entitites mentioned in the entry & load into database
+	# try: 
+	# 	orgs = getEntryOrgs(basicMeta, cliffData, link)
+	# 	people = getEntryPeople(basicMeta, cliffData, link)
+	# 	entitiesMentioned = orgs + people
+	# 	for e in entitiesMentioned:
+	# 		insertEntities(e)
+	# 		writeCSV(e, 'entry_entities')
+	# except KeyError:
+	# 	print 'NO ENTITIES'
 
 
-	print 'getting places'
-	#get a list of dicts representing places mentioned in the entry & load into database 
-	try: 
-		placesMentioned = getEntryPlaces(basicMeta, cliffData, link)
-		for p in placesMentioned:
-			insertPlaces(p)
-			writeCSV(p, 'entry_places')
-	except KeyError:
-		print 'NO PLACES'
+	# print 'getting places'
+	# #get a list of dicts representing places mentioned in the entry & load into database 
+	# try: 
+	# 	placesMentioned = getEntryPlaces(basicMeta, cliffData, link)
+	# 	for p in placesMentioned:
+	# 		insertPlaces(p)
+	# 		writeCSV(p, 'entry_places')
+	# except KeyError:
+	# 	print 'NO PLACES'
 
-	print 'writing lines'
+	#print 'writing lines'
 	#gets the lines of the entry & writes them to a text file for feeding @mitblogs_ebooks
-	for thisLine in entryLines:
-		writeTXT(thisLine, 'entryLines')
+	#for thisLine in entryLines:
+	#	writeTXT(thisLine, 'entryLines')
 
 	i = i + 1
 	elapsed = time.time() - start

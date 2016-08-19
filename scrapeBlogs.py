@@ -5,7 +5,7 @@
 
 ##import various libraries we will need 
 import nltk 									#for hitting CLIFF 
-import dstk										#to do DATA SCIENCE
+#import dstk										#to do DATA SCIENCE
 import string									#to do fancy string operations
 import urllib, urllib2 							#to load URLs 
 import json 									#to parse api strings 						
@@ -31,7 +31,7 @@ countTweets = 'http://urls.api.twitter.com/1/urls/count.json?url='
 
 #initiate a DSTK instance (use private server once RAM upgraded)
 ds = (open('../RESOURCES/admdstk.txt')).read()
-dstk = dstk.DSTK({'apiBase':ds})
+#dstk = dstk.DSTK({'apiBase':ds})
 #dstk = dstk.DSTK()
 
 ##define custom functions
